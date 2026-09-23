@@ -9,6 +9,9 @@
     "lint": "next lint",
     "test": "vitest run"
   },
+  "engines": {
+    "node": ">=20.0.0 <21.0.0"
+  },
   "dependencies": {
     "clsx": "^2.1.1",
     "lucide-react": "^0.453.0",
