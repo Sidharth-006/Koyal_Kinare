@@ -15,9 +15,11 @@ import { Plus, AlertTriangle, Receipt, Wallet, Ban } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = [
   { label: 'All Categories', value: '' },
-  { label: 'Raw Material', value: 'RAW_MATERIAL' },
-  { label: 'Utilities', value: 'UTILITIES' },
-  { label: 'Salaries', value: 'SALARIES' },
+  { label: 'Raw Material', value: 'RAW_MATERIALS' },
+  { label: 'LPG Gas', value: 'LPG' },
+  { label: 'Electricity', value: 'ELECTRICITY' },
+  { label: 'Salaries', value: 'SALARY' },
+  { label: 'Packaging', value: 'PACKAGING' },
   { label: 'Maintenance', value: 'MAINTENANCE' },
   { label: 'Miscellaneous', value: 'MISCELLANEOUS' }
 ];
@@ -51,7 +53,7 @@ export default function ExpensesPage() {
   const [submittingVoid, setSubmittingVoid] = useState(false);
 
   // Form State
-  const [category, setCategory] = useState('RAW_MATERIAL');
+  const [category, setCategory] = useState('RAW_MATERIALS');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
   const [description, setDescription] = useState('');
