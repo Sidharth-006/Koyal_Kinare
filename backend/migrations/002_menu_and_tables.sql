@@ -1,0 +1,29 @@
+-- Migration 002: Menu and Tables
+
+CREATE TABLE IF NOT EXISTS menu_categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    display_order INT NOT NULL DEFAULT 0,
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS menu_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category_id UUID NOT NULL REFERENCES menu_categories(id),
+    name VARCHAR(150) NOT NULL,
+    selling_price NUMERIC(12, 2) NOT NULL CHECK (selling_price >= 0),
+    is_available BOOLEAN NOT NULL DEFAULT TRUE,
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cafe_tables (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    table_number VARCHAR(20) NOT NULL UNIQUE,
+    capacity INT NOT NULL DEFAULT 4 CHECK (capacity > 0),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
