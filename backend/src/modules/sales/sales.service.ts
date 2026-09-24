@@ -3,11 +3,19 @@ import { subtractMoney, toDecimal } from '@/shared/money/decimal';
 
 export class SalesService {
   static async getSalesMetrics(startDate: string, endDate: string) {
-    const summary = await SalesRepository.getSalesSummary(startDate, endDate);
-    const paymentSplitsRaw = await SalesRepository.getPaymentSplits(startDate, endDate);
-    const totalExpenses = await SalesRepository.getExpensesSummary(startDate, endDate);
-    const itemBreakdown = await SalesRepository.getItemSalesBreakdown(startDate, endDate);
-    const categoryBreakdown = await SalesRepository.getCategorySalesBreakdown(startDate, endDate);
+    const [
+      summary,
+      paymentSplitsRaw,
+      totalExpenses,
+      itemBreakdown,
+      categoryBreakdown
+    ] = await Promise.all([
+      SalesRepository.getSalesSummary(startDate, endDate),
+      SalesRepository.getPaymentSplits(startDate, endDate),
+      SalesRepository.getExpensesSummary(startDate, endDate),
+      SalesRepository.getItemSalesBreakdown(startDate, endDate),
+      SalesRepository.getCategorySalesBreakdown(startDate, endDate)
+    ]);
 
     const billCount = parseInt(summary.bill_count, 10);
     const totalSales = summary.total_sales;

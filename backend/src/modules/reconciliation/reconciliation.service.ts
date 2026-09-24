@@ -27,24 +27,34 @@ export class ReconciliationService {
   static async getReconciliationPreview(businessDate?: string) {
     const date = businessDate || getTodayDateString();
 
-    const openingRecord = await ReconciliationRepository.getOpeningCash(date);
-    const openingCash = openingRecord ? openingRecord.opening_cash : '0.00';
+    const [
+      openingRecord,
+      cashSales,
+      cashExpenses,
+      upiSales,
+      upiSettlementRecord,
+      cardSales,
+      cardSettlementRecord,
+      closingRecord
+    ] = await Promise.all([
+      ReconciliationRepository.getOpeningCash(date),
+      ReconciliationRepository.getCompletedPaymentsByMethod(date, 'CASH'),
+      ReconciliationRepository.getActiveExpensesByMethod(date, 'CASH'),
+      ReconciliationRepository.getCompletedPaymentsByMethod(date, 'UPI'),
+      ReconciliationRepository.getSettlement(date, 'UPI'),
+      ReconciliationRepository.getCompletedPaymentsByMethod(date, 'CARD'),
+      ReconciliationRepository.getSettlement(date, 'CARD'),
+      ReconciliationRepository.getDailyClosing(date)
+    ]);
 
-    const cashSales = await ReconciliationRepository.getCompletedPaymentsByMethod(date, 'CASH');
-    const cashExpenses = await ReconciliationRepository.getActiveExpensesByMethod(date, 'CASH');
+    const openingCash = openingRecord ? openingRecord.opening_cash : '0.00';
     const expectedClosingCash = subtractMoney(addMoney(openingCash, cashSales), cashExpenses);
 
-    const upiSales = await ReconciliationRepository.getCompletedPaymentsByMethod(date, 'UPI');
-    const upiSettlementRecord = await ReconciliationRepository.getSettlement(date, 'UPI');
     const upiSettlement = upiSettlementRecord ? upiSettlementRecord.settlement_amount : '0.00';
     const upiDifference = subtractMoney(upiSettlement, upiSales);
 
-    const cardSales = await ReconciliationRepository.getCompletedPaymentsByMethod(date, 'CARD');
-    const cardSettlementRecord = await ReconciliationRepository.getSettlement(date, 'CARD');
     const cardSettlement = cardSettlementRecord ? cardSettlementRecord.settlement_amount : '0.00';
     const cardDifference = subtractMoney(cardSettlement, cardSales);
-
-    const closingRecord = await ReconciliationRepository.getDailyClosing(date);
 
     return {
       businessDate: date,

@@ -8,9 +8,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req);
-    const startDate = req.nextUrl.searchParams.get('startDate') || undefined;
-    const endDate = req.nextUrl.searchParams.get('endDate') || undefined;
-    const status = req.nextUrl.searchParams.get('status') || undefined;
+    const getCleanParam = (key: string) => {
+      const val = req.nextUrl.searchParams.get(key);
+      return (!val || val === 'undefined' || val === 'null') ? undefined : val;
+    };
+    const startDate = getCleanParam('startDate');
+    const endDate = getCleanParam('endDate');
+    const status = getCleanParam('status');
     const bills = await BillingService.listBills({ startDate, endDate, status });
     return successResponse({ bills });
   } catch (err) {

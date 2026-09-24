@@ -10,9 +10,11 @@ export class DashboardService {
     const dateObj = new Date(today);
     const monthStart = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-01`;
 
-    const dailyMetrics = await SalesService.getSalesMetrics(today, today);
-    const monthlyMetrics = await SalesService.getSalesMetrics(monthStart, today);
-    const targetSettings = await SettingsRepository.getTargetSettings();
+    const [dailyMetrics, monthlyMetrics, targetSettings] = await Promise.all([
+      SalesService.getSalesMetrics(today, today),
+      SalesService.getSalesMetrics(monthStart, today),
+      SettingsRepository.getTargetSettings()
+    ]);
 
     const dailyTarget = targetSettings.daily_sales_target;
     const monthlyTarget = targetSettings.monthly_sales_target;

@@ -2,7 +2,7 @@ import {
   AdminDTO, CatalogDTO, BillDTO, CategoryDTO, MenuItemDTO, TableDTO,
   ExpenseDTO, CashOpeningDTO, DailyClosingDTO, SettlementDTO,
   DashboardMetricsDTO, SalesMetricsDTO, ExportResultDTO, BusinessSettingsDTO,
-  TargetSettingsDTO, TaxSettingsDTO
+  TargetSettingsDTO, TaxSettingsDTO, InventoryItemDTO, InventoryListResultDTO
 } from './types';
 
 export class ApiError extends Error {
@@ -45,7 +45,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     CONFLICT: 'This record changed elsewhere. Refresh and try again.',
     RATE_LIMITED: 'Too many attempts. Please wait a moment and try again.',
     INTERNAL_ERROR: 'Something went wrong. Please try again.',
-    UNAUTHORIZED: 'Sign-in details are incorrect. Please try again.'
+    UNAUTHORIZED: 'Sign-in details are incorrect. Please try again.',
+    DUPLICATE_INVENTORY_ITEM: 'An active inventory item already uses this name.',
+    ITEM_HAS_STOCK_HISTORY: 'Base unit cannot change after stock activity has started.',
+    ITEM_IN_USE: 'Cannot archive inventory item that is in use by pending purchases or operations.'
   };
 
   if (!response.ok) {
@@ -109,16 +112,26 @@ export const api = {
   getBillById: (id: string) =>
     request<{ bill: BillDTO }>(`/api/bills/${id}`),
   listBills: (params: { startDate?: string; endDate?: string; status?: string }) => {
-    const queryStr = new URLSearchParams(params as any).toString();
-    return request<{ bills: BillDTO[] }>(`/api/pos/bills?${queryStr}`);
+    const searchParams = new URLSearchParams();
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+    if (params.status) searchParams.set('status', params.status);
+    const queryStr = searchParams.toString();
+    return request<{ bills: BillDTO[] }>(`/api/pos/bills${queryStr ? `?${queryStr}` : ''}`);
   },
   voidBill: (id: string, voidReason: string) =>
     request<{ bill: BillDTO }>(`/api/bills/${id}/void`, { method: 'POST', body: JSON.stringify({ voidReason }) }),
 
   // Expenses
   listExpenses: (params: { startDate?: string; endDate?: string; category?: string; paymentMethod?: string; includeVoided?: boolean }) => {
-    const queryStr = new URLSearchParams(params as any).toString();
-    return request<{ expenses: ExpenseDTO[] }>(`/api/expenses?${queryStr}`);
+    const searchParams = new URLSearchParams();
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+    if (params.category) searchParams.set('category', params.category);
+    if (params.paymentMethod) searchParams.set('paymentMethod', params.paymentMethod);
+    if (params.includeVoided !== undefined) searchParams.set('includeVoided', params.includeVoided.toString());
+    const queryStr = searchParams.toString();
+    return request<{ expenses: ExpenseDTO[] }>(`/api/expenses${queryStr ? `?${queryStr}` : ''}`);
   },
   createExpense: (payload: { businessDate?: string; category: string; amount: number | string; paymentMethod: 'CASH' | 'UPI' | 'CARD'; description: string }) =>
     request<{ expense: ExpenseDTO }>('/api/expenses', { method: 'POST', body: JSON.stringify(payload) }),
@@ -143,7 +156,36 @@ export const api = {
 
   // Reports
   exportReport: (payload: { reportType: string; startDate: string; endDate: string; fileFormat: 'EXCEL' | 'PDF' }) =>
-    request<ExportResultDTO>('/api/reports/export', { method: 'POST', body: JSON.stringify(payload) })
+    request<ExportResultDTO>('/api/reports/export', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // Inventory Master
+  listInventoryItems: (params: { search?: string; type?: string; status?: string; page?: number; pageSize?: number }) => {
+    const cleanParams: Record<string, string> = {};
+    if (params.search) cleanParams.search = params.search;
+    if (params.type) cleanParams.type = params.type;
+    if (params.status) cleanParams.status = params.status;
+    if (params.page) cleanParams.page = String(params.page);
+    if (params.pageSize) cleanParams.pageSize = String(params.pageSize);
+    const queryStr = new URLSearchParams(cleanParams).toString();
+    return request<InventoryListResultDTO>(`/api/inventory/items?${queryStr}`);
+  },
+  getInventoryItemById: (id: string) =>
+    request<{ item: InventoryItemDTO }>(`/api/inventory/items/${id}`),
+  createInventoryItem: (
+    payload: { name: string; itemType: string; baseUnit: string; minimumStock: number | string; description?: string },
+    idempotencyKey?: string
+  ) =>
+    request<{ item: InventoryItemDTO }>('/api/inventory/items', { method: 'POST', body: JSON.stringify(payload) }, idempotencyKey),
+  updateInventoryItem: (
+    id: string,
+    payload: { name?: string; itemType?: string; baseUnit?: string; minimumStock?: number | string; description?: string },
+    idempotencyKey?: string
+  ) =>
+    request<{ item: InventoryItemDTO }>(`/api/inventory/items/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, idempotencyKey),
+  archiveInventoryItem: (id: string, idempotencyKey?: string) =>
+    request<{ item: InventoryItemDTO }>(`/api/inventory/items/${id}/archive`, { method: 'POST' }, idempotencyKey),
+  restoreInventoryItem: (id: string, idempotencyKey?: string) =>
+    request<{ item: InventoryItemDTO }>(`/api/inventory/items/${id}/restore`, { method: 'POST' }, idempotencyKey)
 };
 
 export function downloadExportFile(exportData: ExportResultDTO, filename: string) {

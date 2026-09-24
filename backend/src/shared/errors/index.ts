@@ -40,3 +40,22 @@ export class IdempotencyError extends AppError {
     super(message, 'IDEMPOTENCY_KEY_REUSED', 409);
   }
 }
+
+export class DuplicateInventoryItemError extends AppError {
+  constructor(message: string = 'An active inventory item with the same name already exists.') {
+    super(message, 'DUPLICATE_INVENTORY_ITEM', 409);
+  }
+}
+
+export class ItemHasStockHistoryError extends AppError {
+  constructor(message: string = 'Cannot change base unit for an item that has stock movement history.') {
+    super(message, 'ITEM_HAS_STOCK_HISTORY', 409);
+  }
+}
+
+export class ItemInUseError extends AppError {
+  constructor(message: string = 'Cannot archive inventory item that is in use by pending purchases or operations.') {
+    super(message, 'ITEM_IN_USE', 409);
+  }
+}
+

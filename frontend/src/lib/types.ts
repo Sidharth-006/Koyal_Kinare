@@ -322,3 +322,33 @@ export interface ExportResultDTO {
   contentBuffer: string;
   mimeType: string;
 }
+
+export type InventoryItemType = 'RAW_MATERIAL' | 'PACKAGING' | 'BEVERAGE' | 'CONSUMABLE';
+export type InventoryBaseUnit = 'KG' | 'G' | 'L' | 'ML' | 'PIECE' | 'PACKET' | 'BOX';
+
+export interface InventoryItemDTO {
+  id: string;
+  name: string;
+  itemType: InventoryItemType;
+  item_type?: InventoryItemType;
+  baseUnit: InventoryBaseUnit;
+  base_unit?: InventoryBaseUnit;
+  minimumStock: string | number;
+  minimum_stock?: string | number;
+  description: string | null;
+  isArchived: boolean;
+  is_archived?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InventoryListResultDTO {
+  items: InventoryItemDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
