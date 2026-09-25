@@ -59,3 +59,10 @@ export class ItemInUseError extends AppError {
   }
 }
 
+export class DuplicateSupplierError extends AppError {
+  constructor(message: string = 'An active supplier with the same name already exists.') {
+    super(message, 'DUPLICATE_SUPPLIER', 409);
+  }
+}
+
+

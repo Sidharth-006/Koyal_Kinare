@@ -9,7 +9,7 @@ export const logger = pino({
   },
   timestamp: pino.stdTimeFunctions.isoTime,
   redact: {
-    paths: ['password', 'password_hash', 'token', 'token_hash', 'cookie', 'headers.authorization', 'headers.cookie'],
+    paths: ['password', 'password_hash', 'token', 'token_hash', 'cookie', 'headers.authorization', 'headers.cookie', 'phone', 'email', 'contactPerson', 'contact_person', 'gstin'],
     censor: '[REDACTED]'
   }
 });

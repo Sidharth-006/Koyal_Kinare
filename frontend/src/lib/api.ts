@@ -2,7 +2,9 @@ import {
   AdminDTO, CatalogDTO, BillDTO, CategoryDTO, MenuItemDTO, TableDTO,
   ExpenseDTO, CashOpeningDTO, DailyClosingDTO, SettlementDTO,
   DashboardMetricsDTO, SalesMetricsDTO, ExportResultDTO, BusinessSettingsDTO,
-  TargetSettingsDTO, TaxSettingsDTO, InventoryItemDTO, InventoryListResultDTO
+  TargetSettingsDTO, TaxSettingsDTO, InventoryItemDTO, InventoryListResultDTO,
+  SupplierDTO, SupplierListResultDTO, SupplierPurchaseSummaryDTO,
+  CreateSupplierPayload, UpdateSupplierPayload, SupplierListParams
 } from './types';
 
 export class ApiError extends Error {
@@ -48,7 +50,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     UNAUTHORIZED: 'Sign-in details are incorrect. Please try again.',
     DUPLICATE_INVENTORY_ITEM: 'An active inventory item already uses this name.',
     ITEM_HAS_STOCK_HISTORY: 'Base unit cannot change after stock activity has started.',
-    ITEM_IN_USE: 'Cannot archive inventory item that is in use by pending purchases or operations.'
+    ITEM_IN_USE: 'Cannot archive inventory item that is in use by pending purchases or operations.',
+    DUPLICATE_SUPPLIER: 'An active supplier already uses this name.'
   };
 
   if (!response.ok) {
@@ -185,7 +188,37 @@ export const api = {
   archiveInventoryItem: (id: string, idempotencyKey?: string) =>
     request<{ item: InventoryItemDTO }>(`/api/inventory/items/${id}/archive`, { method: 'POST' }, idempotencyKey),
   restoreInventoryItem: (id: string, idempotencyKey?: string) =>
-    request<{ item: InventoryItemDTO }>(`/api/inventory/items/${id}/restore`, { method: 'POST' }, idempotencyKey)
+    request<{ item: InventoryItemDTO }>(`/api/inventory/items/${id}/restore`, { method: 'POST' }, idempotencyKey),
+
+  // Supplier Management
+  listSuppliers: (params?: SupplierListParams) => {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.status) query.set('status', params.status);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+    const queryStr = query.toString();
+    return request<SupplierListResultDTO>(`/api/suppliers${queryStr ? `?${queryStr}` : ''}`);
+  },
+  getSupplierById: (id: string) =>
+    request<{ supplier: SupplierDTO }>(`/api/suppliers/${id}`),
+  createSupplier: (payload: CreateSupplierPayload, idempotencyKey?: string) =>
+    request<{ supplier: SupplierDTO }>('/api/suppliers', { method: 'POST', body: JSON.stringify(payload) }, idempotencyKey),
+  updateSupplier: (id: string, payload: UpdateSupplierPayload, idempotencyKey?: string) =>
+    request<{ supplier: SupplierDTO }>(`/api/suppliers/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, idempotencyKey),
+  archiveSupplier: (id: string, idempotencyKey?: string) =>
+    request<{ supplier: SupplierDTO }>(`/api/suppliers/${id}/archive`, { method: 'POST' }, idempotencyKey),
+  restoreSupplier: (id: string, idempotencyKey?: string) =>
+    request<{ supplier: SupplierDTO }>(`/api/suppliers/${id}/restore`, { method: 'POST' }, idempotencyKey),
+  getSupplierPurchaseSummary: (id: string, params?: { from?: string; to?: string; page?: number | string; pageSize?: number | string }) => {
+    const query = new URLSearchParams();
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+    const queryStr = query.toString();
+    return request<SupplierPurchaseSummaryDTO>(`/api/suppliers/${id}/purchase-summary${queryStr ? `?${queryStr}` : ''}`);
+  }
 };
 
 export function downloadExportFile(exportData: ExportResultDTO, filename: string) {

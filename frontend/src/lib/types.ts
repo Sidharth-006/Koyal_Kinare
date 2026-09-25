@@ -352,3 +352,75 @@ export interface InventoryListResultDTO {
   totalPages: number;
 }
 
+export interface SupplierDTO {
+  id: string;
+  name: string;
+  contactPerson?: string | null;
+  contact_person?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  gstin?: string | null;
+  notes?: string | null;
+  isArchived: boolean;
+  is_archived?: boolean;
+  createdBy?: string | null;
+  created_by?: string | null;
+  updatedBy?: string | null;
+  updated_by?: string | null;
+  createdAt: string;
+  created_at?: string;
+  updatedAt: string;
+  updated_at?: string;
+}
+
+export interface SupplierPaginationDTO {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface SupplierListResultDTO {
+  items: SupplierDTO[];
+  pagination: SupplierPaginationDTO;
+}
+
+export interface SupplierPurchaseSummaryDTO {
+  supplierId: string;
+  totalPurchasesCount: number;
+  totalPurchasesAmount: number;
+  receivedPurchasesCount: number;
+  receivedPurchasesAmount: number;
+  recentPurchases: any[];
+  pagination: SupplierPaginationDTO;
+}
+
+export interface CreateSupplierPayload {
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  gstin?: string;
+  notes?: string;
+}
+
+export interface UpdateSupplierPayload {
+  name?: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  gstin?: string;
+  notes?: string;
+}
+
+export interface SupplierListParams {
+  search?: string;
+  status?: 'active' | 'archived' | 'all';
+  page?: number | string;
+  pageSize?: number | string;
+}
+
+

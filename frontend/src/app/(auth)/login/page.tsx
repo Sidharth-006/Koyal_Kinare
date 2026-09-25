@@ -110,7 +110,6 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen w-full bg-[#122018] overflow-x-hidden flex font-sans select-none">
       
-      {/* Full-bleed background image with dark warm cafe atmosphere */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-luminosity scale-105 transition-transform duration-10000"
         style={{
@@ -119,17 +118,13 @@ export default function LoginPage() {
         aria-hidden="true"
       />
       
-      {/* Dark gradient & vignette overlay to match reference lighting */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#0E1B14]/90 via-[#14261C]/80 to-[#0A140F]/95" aria-hidden="true" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/30 to-black/70" aria-hidden="true" />
 
-      {/* Main split content container */}
       <div className="relative z-10 w-full min-h-screen flex flex-col lg:flex-row items-center justify-between p-6 sm:p-10 lg:p-16 max-w-7xl mx-auto">
         
-        {/* ================= LEFT SECTION (~50% width on Desktop) ================= */}
         <div className="w-full lg:w-1/2 flex flex-col justify-between py-6 lg:py-12 lg:pr-12 text-center lg:text-left min-h-[220px] lg:min-h-[580px]">
           
-          {/* Top/Center Brand Emblem & Title */}
           <div className="flex flex-col items-center lg:items-start space-y-3">
             <KoyalBirdEmblem className="w-32 h-24 text-[#D8C29D] drop-shadow-md" />
             
@@ -137,7 +132,6 @@ export default function LoginPage() {
               Koyal Kinare
             </h1>
 
-            {/* Sub-brand divider */}
             <div className="flex items-center gap-3 w-full justify-center lg:justify-start pt-1">
               <div className="h-[1px] w-8 sm:w-12 bg-[#D8C29D]/40" />
               <span className="text-xs sm:text-sm font-semibold tracking-[0.35em] text-[#D8C29D] uppercase">
@@ -146,13 +140,11 @@ export default function LoginPage() {
               <div className="h-[1px] w-8 sm:w-12 bg-[#D8C29D]/40" />
             </div>
 
-            {/* Tagline */}
             <p className="text-[11px] sm:text-xs font-semibold tracking-[0.25em] text-[#C2B29A] uppercase pt-4">
               GOOD FOOD &nbsp;•&nbsp; GREAT VIBES &nbsp;•&nbsp; TOGETHER
             </p>
           </div>
 
-          {/* Bottom Left Footer Tagline (Desktop) */}
           <div className="hidden lg:flex items-center gap-2.5 text-xs font-medium tracking-[0.18em] text-[#9E9280] uppercase pt-12">
             <Coffee className="w-4 h-4 text-[#D8C29D]" />
             <span>FRESH COFFEE &nbsp;/&nbsp; DELICIOUS FOOD &nbsp;/&nbsp; HAPPY PEOPLE</span>
@@ -160,12 +152,10 @@ export default function LoginPage() {
 
         </div>
 
-        {/* ================= RIGHT SECTION (~50% width - Floating Cream Card) ================= */}
         <div className="w-full lg:w-1/2 flex items-center justify-center lg:justify-end py-4 lg:py-8">
           
           <div className="w-full max-w-[440px] bg-[#F4EFE6] rounded-[28px] sm:rounded-[32px] p-8 sm:p-10 md:p-11 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] border border-[#E5DEC3]/30 transition-all">
             
-            {/* Card Header */}
             <div className="text-center mb-7 sm:mb-8">
               <span className="text-[11px] font-bold tracking-[0.28em] text-[#787062] uppercase block">
                 ADMIN PORTAL
@@ -178,7 +168,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* General Error Banner */}
             {generalError && (
               <div 
                 role="alert" 
@@ -189,10 +178,8 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Form */}
             <form onSubmit={handleSubmit} noValidate className="space-y-4">
               
-              {/* Email Address Field */}
               <div className="space-y-1.5">
                 <label 
                   htmlFor="admin-email" 
@@ -220,7 +207,6 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Password Field */}
               <div className="space-y-1.5">
                 <label 
                   htmlFor="admin-password" 
@@ -260,7 +246,6 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -278,14 +263,12 @@ export default function LoginPage() {
 
             </form>
 
-            {/* Decorative Leaf & Brand Divider */}
             <div className="flex items-center justify-center gap-3 mt-7 mb-3" aria-hidden="true">
               <div className="h-[1px] w-12 bg-[#DDD5C7]" />
               <Leaf className="w-3.5 h-3.5 text-[#1C3026] fill-[#1C3026]/20" />
               <div className="h-[1px] w-12 bg-[#DDD5C7]" />
             </div>
 
-            {/* Footer Text */}
             <div className="text-center space-y-0.5">
               <p className="text-[10px] font-bold tracking-[0.22em] text-[#787062] uppercase">
                 KOYAL KINARE CAFE
