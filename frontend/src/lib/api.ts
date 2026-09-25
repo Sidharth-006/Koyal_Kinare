@@ -145,7 +145,7 @@ export const api = {
   setOpeningCash: (payload: { businessDate?: string; openingCash: number | string }) =>
     request<{ opening: CashOpeningDTO }>('/api/reconciliation/cash-opening', { method: 'POST', body: JSON.stringify(payload) }),
   getReconciliationPreview: (businessDate?: string) =>
-    request<{ reconciliation: any }>(`/api/reconciliation/daily-closing?businessDate=${businessDate || ''}`),
+    request<{ reconciliation: any }>(`/api/reconciliation/daily-closing?businessDate=${businessDate || ''}`, { cache: 'no-store' }),
   recordSettlement: (payload: { businessDate?: string; method: 'UPI' | 'CARD'; settlementAmount: number | string; notes?: string }) =>
     request<{ settlement: SettlementDTO }>('/api/reconciliation/settlement', { method: 'POST', body: JSON.stringify(payload) }),
   finalizeDailyClosing: (payload: { businessDate?: string; actualCash: number | string; upiSettlementAmount?: number | string; cardSettlementAmount?: number | string; notes?: string }) =>
@@ -153,7 +153,7 @@ export const api = {
 
   // Dashboard & Sales
   getDashboardMetrics: (date?: string) =>
-    request<{ metrics: DashboardMetricsDTO }>(`/api/dashboard?date=${date || ''}`),
+    request<{ metrics: DashboardMetricsDTO }>(`/api/dashboard?date=${date || ''}`, { cache: 'no-store' }),
   getSalesMetrics: (startDate: string, endDate: string) =>
     request<{ sales: SalesMetricsDTO }>(`/api/sales?startDate=${startDate}&endDate=${endDate}`),
 

@@ -56,18 +56,59 @@ export class ReconciliationService {
     const cardSettlement = cardSettlementRecord ? cardSettlementRecord.settlement_amount : '0.00';
     const cardDifference = subtractMoney(cardSettlement, cardSales);
 
+    const openingObj = openingRecord ? {
+      ...openingRecord,
+      openingCash: openingRecord.opening_cash,
+      opening_cash: openingRecord.opening_cash
+    } : null;
+
+    const closingObj = closingRecord ? {
+      ...closingRecord,
+      actualCash: closingRecord.actual_cash,
+      cashDifference: closingRecord.cash_difference,
+      isClosed: closingRecord.status === 'CLOSED'
+    } : null;
+
+    const upiSettlementObj = upiSettlementRecord ? {
+      ...upiSettlementRecord,
+      settlementAmount: upiSettlementRecord.settlement_amount,
+      settlement_amount: upiSettlementRecord.settlement_amount
+    } : null;
+
+    const cardSettlementObj = cardSettlementRecord ? {
+      ...cardSettlementRecord,
+      settlementAmount: cardSettlementRecord.settlement_amount,
+      settlement_amount: cardSettlementRecord.settlement_amount
+    } : null;
+
     return {
       businessDate: date,
+      opening: openingObj,
+      openingRecord,
       openingCash,
+      opening_cash: openingCash,
       cashSales,
+      totalCashSales: cashSales,
+      total_cash_sales: cashSales,
       cashExpenses,
+      totalCashExpenses: cashExpenses,
+      total_cash_expenses: cashExpenses,
+      expectedCash: expectedClosingCash,
       expectedClosingCash,
+      expected_closing_cash: expectedClosingCash,
       upiSales,
-      upiSettlement,
+      totalUpiSales: upiSales,
+      total_upi_sales: upiSales,
+      upiSettlement: upiSettlementObj,
+      upiSettlementAmount: upiSettlement,
       upiDifference,
       cardSales,
-      cardSettlement,
+      totalCardSales: cardSales,
+      total_card_sales: cardSales,
+      cardSettlement: cardSettlementObj,
+      cardSettlementAmount: cardSettlement,
       cardDifference,
+      closing: closingObj,
       closingRecord
     };
   }
@@ -146,11 +187,15 @@ export class ReconciliationService {
       cashStatus = 'EXCESS';
     }
 
-    const upiSettlementStr = params.upiSettlementAmount !== undefined ? String(params.upiSettlementAmount) : preview.upiSettlement;
+    const upiSettlementStr = params.upiSettlementAmount !== undefined
+      ? String(params.upiSettlementAmount)
+      : (preview.upiSettlementAmount || (typeof preview.upiSettlement === 'string' ? preview.upiSettlement : (preview.upiSettlement?.settlement_amount || '0.00')));
     const upiDifference = subtractMoney(upiSettlementStr, preview.upiSales);
     const upiStatus = toDecimal(upiDifference).equals(0) ? 'MATCHED' : 'MISMATCHED';
 
-    const cardSettlementStr = params.cardSettlementAmount !== undefined ? String(params.cardSettlementAmount) : preview.cardSettlement;
+    const cardSettlementStr = params.cardSettlementAmount !== undefined
+      ? String(params.cardSettlementAmount)
+      : (preview.cardSettlementAmount || (typeof preview.cardSettlement === 'string' ? preview.cardSettlement : (preview.cardSettlement?.settlement_amount || '0.00')));
     const cardDifference = subtractMoney(cardSettlementStr, preview.cardSales);
     const cardStatus = toDecimal(cardDifference).equals(0) ? 'MATCHED' : 'MISMATCHED';
 

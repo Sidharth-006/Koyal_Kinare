@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { formatINR } from '@/lib/format';
+import { formatINR, getTodayIsoDate } from '@/lib/format';
 import { useToast } from '@/components/ui/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -14,7 +14,7 @@ import { Lock, Unlock, Key, Wallet, CreditCard, DollarSign, CheckCircle2 } from 
 export default function ReconciliationPage() {
   const { showToast } = useToast();
 
-  const [businessDate, setBusinessDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [businessDate, setBusinessDate] = useState(() => getTodayIsoDate());
   const [reconData, setReconData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -144,21 +144,21 @@ export default function ReconciliationPage() {
   };
 
   // Realtime Variance Calculation
-  const openingVal = reconData?.opening?.opening_cash || reconData?.opening?.openingCash || 0;
-  const cashSalesVal = reconData?.totalCashSales || reconData?.total_cash_sales || 0;
-  const cashExpVal = reconData?.totalCashExpenses || reconData?.total_cash_expenses || 0;
+  const openingVal = reconData?.opening?.opening_cash ?? reconData?.opening?.openingCash ?? reconData?.openingCash ?? 0;
+  const cashSalesVal = reconData?.totalCashSales ?? reconData?.total_cash_sales ?? reconData?.cashSales ?? 0;
+  const cashExpVal = reconData?.totalCashExpenses ?? reconData?.total_cash_expenses ?? reconData?.cashExpenses ?? 0;
 
-  const expectedCash = Number(reconData?.expectedCash || reconData?.expected_closing_cash || (Number(openingVal) + Number(cashSalesVal) - Number(cashExpVal)));
+  const expectedCash = Number(reconData?.expectedCash ?? reconData?.expected_closing_cash ?? reconData?.expectedClosingCash ?? (Number(openingVal) + Number(cashSalesVal) - Number(cashExpVal)));
   const actualCashNum = parseFloat(actualCashInput) || 0;
   const variance = actualCashNum - expectedCash;
 
-  const isClosed = reconData?.closing?.isClosed || reconData?.closing?.status === 'CLOSED';
+  const isClosed = reconData?.closing?.isClosed || reconData?.closing?.status === 'CLOSED' || reconData?.closingRecord?.status === 'CLOSED';
 
-  const upiSalesVal = reconData?.totalUpiSales || reconData?.total_upi_sales || 0;
-  const upiSettledVal = reconData?.upiSettlement?.settlementAmount || reconData?.upiSettlement?.settlement_amount || 0;
+  const upiSalesVal = reconData?.totalUpiSales ?? reconData?.total_upi_sales ?? reconData?.upiSales ?? 0;
+  const upiSettledVal = reconData?.upiSettlement?.settlementAmount ?? reconData?.upiSettlement?.settlement_amount ?? reconData?.upiSettlementAmount ?? (typeof reconData?.upiSettlement === 'string' ? reconData.upiSettlement : 0);
 
-  const cardSalesVal = reconData?.totalCardSales || reconData?.total_card_sales || 0;
-  const cardSettledVal = reconData?.cardSettlement?.settlementAmount || reconData?.cardSettlement?.settlement_amount || 0;
+  const cardSalesVal = reconData?.totalCardSales ?? reconData?.total_card_sales ?? reconData?.cardSales ?? 0;
+  const cardSettledVal = reconData?.cardSettlement?.settlementAmount ?? reconData?.cardSettlement?.settlement_amount ?? reconData?.cardSettlementAmount ?? (typeof reconData?.cardSettlement === 'string' ? reconData.cardSettlement : 0);
 
   return (
     <div className="space-y-6 font-sans">
@@ -181,7 +181,7 @@ export default function ReconciliationPage() {
 
       {loading ? (
         <Card className="p-8 text-center text-slate-400 font-medium">Loading reconciliation state...</Card>
-      ) : !reconData?.opening ? (
+      ) : (!reconData?.opening && !reconData?.openingRecord) ? (
         /* STEP 1: OPENING CASH NOT SET */
         <Card className="max-w-xl mx-auto space-y-4 border-border p-8">
           <div className="text-center space-y-2">

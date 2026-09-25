@@ -184,37 +184,49 @@ export default function DashboardPage() {
       {recon && (
         <Card className="bg-white border-border shadow-2xs">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl ${recon.closing?.status === 'CLOSED' || recon.closing?.isClosed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                <SlidersHorizontal className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold text-slate-800">Daily Closing & Shift Status</h2>
-                  {recon.closing?.status === 'CLOSED' || recon.closing?.isClosed ? (
-                    <Badge variant="success">Day Closed & Finalized</Badge>
-                  ) : (
-                    <Badge variant="warning">Register Open</Badge>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  Opening Cash Float: <span className="font-semibold text-slate-700">{formatINR(recon.opening?.opening_cash || recon.opening?.openingCash || 0)}</span> • Expected Cash in Drawer: <span className="font-semibold text-slate-700">{formatINR(recon.expectedCash || recon.expected_closing_cash || 0)}</span>
-                </p>
-              </div>
-            </div>
+            {(() => {
+              const closingRecord = recon.closing || recon.closingRecord;
+              const isDayClosed = closingRecord?.status === 'CLOSED' || closingRecord?.isClosed;
+              const openingVal = recon.opening?.opening_cash ?? recon.opening?.openingCash ?? recon.openingCash ?? 0;
+              const expectedVal = recon.expectedCash ?? recon.expectedClosingCash ?? recon.expected_closing_cash ?? 0;
+              const cashMismatch = closingRecord?.cash_difference ?? closingRecord?.cashDifference ?? 0;
 
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              {Number(recon.closing?.cash_difference || recon.closing?.cashDifference || 0) !== 0 && recon.closing?.status === 'CLOSED' && (
-                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
-                  Cash Mismatch: {formatINR(recon.closing?.cash_difference || recon.closing?.cashDifference)}
-                </span>
-              )}
-              <Link href="/reconciliation">
-                <Button variant="secondary" size="sm" className="text-xs font-bold">
-                  {recon.closing?.status === 'CLOSED' || recon.closing?.isClosed ? 'View Audit Record' : 'Perform Closing'}
-                </Button>
-              </Link>
-            </div>
+              return (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl ${isDayClosed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                      <SlidersHorizontal className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-bold text-slate-800">Daily Closing & Shift Status</h2>
+                        {isDayClosed ? (
+                          <Badge variant="success">Day Closed & Finalized</Badge>
+                        ) : (
+                          <Badge variant="warning">Register Open</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                        Opening Cash Float: <span className="font-semibold text-slate-700">{formatINR(openingVal)}</span> • Expected Cash in Drawer: <span className="font-semibold text-slate-700">{formatINR(expectedVal)}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    {Number(cashMismatch) !== 0 && isDayClosed && (
+                      <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+                        Cash Mismatch: {formatINR(cashMismatch)}
+                      </span>
+                    )}
+                    <Link href="/reconciliation">
+                      <Button variant="secondary" size="sm" className="text-xs font-bold">
+                        {isDayClosed ? 'View Audit Record' : 'Perform Closing'}
+                      </Button>
+                    </Link>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </Card>
       )}
