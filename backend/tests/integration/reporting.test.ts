@@ -26,7 +26,7 @@ describe('Report Export File Generation Integration Tests', () => {
     expect(content).toContain('"Pani Puri","50","1500.00"');
   });
 
-  it('should format PDF export content with summary details', () => {
+  it('should format PDF export content with summary details', async () => {
     const metadata = {
       reportTitle: 'EXPENSE_REPORT (PDF)',
       appliedDateRange: '2026-09-01 to 2026-09-19',
@@ -34,10 +34,9 @@ describe('Report Export File Generation Integration Tests', () => {
     };
     const sampleData = { totalExpenses: '4500.00', category: 'RAW_MATERIALS' };
 
-    const content = (ReportService as any).buildPdfContent(metadata, sampleData);
-    expect(content).toContain('%PDF-1.4 Header');
-    expect(content).toContain('Koyal Kinare Cafe - Official Report');
-    expect(content).toContain('RAW_MATERIALS');
-    expect(content).toContain('4500.00');
+    const content = await (ReportService as any).buildPdfContent(metadata, sampleData);
+    const buffer = Buffer.from(content);
+    expect(buffer.slice(0, 5).toString('utf-8')).toBe('%PDF-');
+    expect(buffer.length).toBeGreaterThan(500);
   });
 });

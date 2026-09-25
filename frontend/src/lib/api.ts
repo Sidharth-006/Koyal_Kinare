@@ -222,18 +222,24 @@ export const api = {
 };
 
 export function downloadExportFile(exportData: ExportResultDTO, filename: string) {
-  const binaryString = atob(exportData.contentBuffer || '');
+  const cleanBase64 = (exportData.contentBuffer || '').replace(/\s/g, '');
+  const binaryString = atob(cleanBase64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  const blob = new Blob([bytes.buffer], { type: exportData.mimeType });
+  const blob = new Blob([bytes], { type: exportData.mimeType || 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
+  a.style.display = 'none';
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    if (document.body.contains(a)) {
+      document.body.removeChild(a);
+    }
+    URL.revokeObjectURL(url);
+  }, 2000);
 }

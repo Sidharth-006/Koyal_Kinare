@@ -2,12 +2,14 @@ import { ExportRepository } from './export.repository';
 import { SalesService } from '../sales/sales.service';
 import { ExpenseService } from '../expense/expense.service';
 import { BillingService } from '../billing/billing.service';
+import { ReconciliationService } from '../reconciliation/reconciliation.service';
 import { AuditService } from '../audit/audit.service';
+import { PdfGenerator } from './pdf.generator';
 import { ValidationError } from '@/shared/errors';
 
 export class ReportService {
   static async generateReportData(params: {
-    reportType: 'DAILY_SALES' | 'MONTHLY_SALES' | 'ITEM_SALES' | 'CATEGORY_SALES' | 'EXPENSE_REPORT' | 'TRANSACTION_HISTORY' | 'RECONCILIATION';
+    reportType: string;
     startDate: string;
     endDate: string;
   }) {
@@ -17,6 +19,7 @@ export class ReportService {
 
     switch (params.reportType) {
       case 'DAILY_SALES':
+      case 'DAILY_SUMMARY':
       case 'MONTHLY_SALES':
       case 'ITEM_SALES':
       case 'CATEGORY_SALES':
@@ -25,6 +28,9 @@ export class ReportService {
         return ExpenseService.listExpenses({ startDate: params.startDate, endDate: params.endDate });
       case 'TRANSACTION_HISTORY':
         return BillingService.listBills({ startDate: params.startDate, endDate: params.endDate });
+      case 'RECONCILIATION':
+      case 'RECONCILIATION_REPORT':
+        return ReconciliationService.getReconciliationPreview(params.startDate);
       default:
         return SalesService.getSalesMetrics(params.startDate, params.endDate);
     }
@@ -64,11 +70,11 @@ export class ReportService {
     };
 
     // Format export buffer content
-    let content: string | Buffer;
+    let content: string | Buffer | Uint8Array;
     if (params.fileFormat === 'EXCEL') {
       content = this.buildCsvExcelContent(metadata, reportData);
     } else {
-      content = this.buildPdfContent(metadata, reportData);
+      content = await this.buildPdfContent(metadata, reportData);
     }
 
     return {
@@ -104,13 +110,7 @@ export class ReportService {
     return csv;
   }
 
-  private static buildPdfContent(metadata: any, data: any): string {
-    let pdfText = `%PDF-1.4 Header\n`;
-    pdfText += `Koyal Kinare Cafe - Official Report\n`;
-    pdfText += `Title: ${metadata.reportTitle}\n`;
-    pdfText += `Date Range: ${metadata.appliedDateRange}\n`;
-    pdfText += `Generated At: ${metadata.generatedAt}\n\n`;
-    pdfText += `DATA SUMMARY:\n${JSON.stringify(data, null, 2)}\n`;
-    return pdfText;
+  private static async buildPdfContent(metadata: any, data: any): Promise<Uint8Array> {
+    return PdfGenerator.generate(metadata, data);
   }
 }
