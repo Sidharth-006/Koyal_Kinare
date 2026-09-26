@@ -423,4 +423,139 @@ export interface SupplierListParams {
   pageSize?: number | string;
 }
 
+// Module 3: Purchase Management Types
+export type PurchaseStatus = 'DRAFT' | 'RECEIVED' | 'REVERSED';
+export type PurchasePaymentMethod = 'CASH' | 'UPI' | 'CARD' | 'CREDIT';
+
+export interface PurchaseLineDTO {
+  id: string;
+  purchase_id?: string;
+  purchaseId?: string;
+  inventory_item_id?: string;
+  inventoryItemId?: string;
+  item_name?: string;
+  itemName?: string;
+  unit: string;
+  quantity: string | number;
+  unit_rate?: string | number;
+  unitRate?: string | number;
+  line_discount?: string | number;
+  lineDiscount?: string | number;
+  tax_rate?: string | number;
+  taxRate?: string | number;
+  line_total?: string | number;
+  lineTotal?: string | number;
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface PurchaseReversalDTO {
+  id: string;
+  purchase_id?: string;
+  purchaseId?: string;
+  reason: string;
+  reversed_by?: string;
+  reversedBy?: string;
+  reversed_at?: string;
+  reversedAt?: string;
+}
+
+export interface PurchaseDTO {
+  id: string;
+  purchase_number?: string;
+  purchaseNumber?: string;
+  supplier_id?: string | null;
+  supplierId?: string | null;
+  supplier_name?: string;
+  supplierName?: string;
+  invoice_number?: string | null;
+  invoiceNumber?: string | null;
+  purchase_date?: string;
+  purchaseDate?: string;
+  payment_method?: PurchasePaymentMethod;
+  paymentMethod?: PurchasePaymentMethod;
+  discount: string | number;
+  tax_amount?: string | number;
+  taxAmount?: string | number;
+  grand_total?: string | number;
+  grandTotal?: string | number;
+  status: PurchaseStatus;
+  received_at?: string | null;
+  receivedAt?: string | null;
+  attachment_id?: string | null;
+  attachmentId?: string | null;
+  note?: string | null;
+  created_by?: string;
+  createdBy?: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  lines?: PurchaseLineDTO[];
+  reversal?: PurchaseReversalDTO | null;
+}
+
+export interface PurchaseListPaginationDTO {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PurchaseListResultDTO {
+  items: PurchaseDTO[];
+  pagination: PurchaseListPaginationDTO;
+}
+
+export interface PurchaseListParams {
+  startDate?: string;
+  endDate?: string;
+  supplierId?: string;
+  inventoryItemId?: string;
+  paymentMethod?: PurchasePaymentMethod;
+  status?: PurchaseStatus;
+  page?: number | string;
+  pageSize?: number | string;
+}
+
+export interface PurchaseLineInput {
+  inventoryItemId: string;
+  quantity: number | string;
+  unitRate: number | string;
+  lineDiscount?: number | string;
+  taxRate?: number | string;
+}
+
+export interface CreatePurchaseDraftPayload {
+  supplierId?: string | null;
+  adhocSupplierName?: string | null;
+  invoiceNumber?: string | null;
+  purchaseDate: string;
+  paymentMethod: PurchasePaymentMethod;
+  discount?: number | string;
+  taxAmount?: number | string;
+  note?: string | null;
+  lines: PurchaseLineInput[];
+}
+
+export interface UpdatePurchaseDraftPayload {
+  supplierId?: string | null;
+  adhocSupplierName?: string | null;
+  invoiceNumber?: string | null;
+  purchaseDate?: string;
+  paymentMethod?: PurchasePaymentMethod;
+  discount?: number | string;
+  taxAmount?: number | string;
+  note?: string | null;
+  lines?: PurchaseLineInput[];
+}
+
+export interface PurchaseAttachmentDTO {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt?: string;
+}
+
 

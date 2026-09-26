@@ -65,4 +65,64 @@ export class DuplicateSupplierError extends AppError {
   }
 }
 
+export class InsufficientStockError extends AppError {
+  constructor(message: string = 'Insufficient stock to perform this movement.') {
+    super(message, 'INSUFFICIENT_STOCK', 400);
+  }
+}
+
+export class DuplicateOpeningStockError extends AppError {
+  constructor(message: string = 'Opening stock has already been recorded for this inventory item.') {
+    super(message, 'DUPLICATE_OPENING_STOCK', 409);
+  }
+}
+
+export class DuplicateMovementError extends AppError {
+  constructor(message: string = 'A stock movement for this source reference has already been recorded.') {
+    super(message, 'DUPLICATE_MOVEMENT', 409);
+  }
+}
+
+export class PurchaseAlreadyReceivedError extends AppError {
+  constructor(message: string = 'Purchase has already been received.') {
+    super(message, 'PURCHASE_ALREADY_RECEIVED', 400);
+  }
+}
+
+export class PurchaseNotReceivableError extends AppError {
+  constructor(message: string = 'Purchase cannot be received in its current status.') {
+    super(message, 'PURCHASE_NOT_RECEIVABLE', 400);
+  }
+}
+
+export class PurchaseNotEditableError extends AppError {
+  constructor(message: string = 'Only draft purchases can be edited.') {
+    super(message, 'PURCHASE_NOT_EDITABLE', 400);
+  }
+}
+
+export class PurchaseAlreadyReversedError extends AppError {
+  constructor(message: string = 'Purchase has already been reversed.') {
+    super(message, 'PURCHASE_ALREADY_REVERSED', 400);
+  }
+}
+
+export class PurchaseNotReversibleError extends AppError {
+  constructor(message: string = 'Only received purchases can be reversed.') {
+    super(message, 'PURCHASE_NOT_REVERSIBLE', 400);
+  }
+}
+
+export class SupplierInactiveError extends AppError {
+  constructor(message: string = 'Supplier is inactive or archived.') {
+    super(message, 'SUPPLIER_INACTIVE', 400);
+  }
+}
+
+export class InventoryItemArchivedError extends AppError {
+  constructor(message: string = 'Inventory item is archived.') {
+    super(message, 'INVENTORY_ITEM_ARCHIVED', 400);
+  }
+}
+
 

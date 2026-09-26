@@ -4,7 +4,9 @@ import {
   DashboardMetricsDTO, SalesMetricsDTO, ExportResultDTO, BusinessSettingsDTO,
   TargetSettingsDTO, TaxSettingsDTO, InventoryItemDTO, InventoryListResultDTO,
   SupplierDTO, SupplierListResultDTO, SupplierPurchaseSummaryDTO,
-  CreateSupplierPayload, UpdateSupplierPayload, SupplierListParams
+  CreateSupplierPayload, UpdateSupplierPayload, SupplierListParams,
+  PurchaseDTO, PurchaseListResultDTO, PurchaseListParams,
+  CreatePurchaseDraftPayload, UpdatePurchaseDraftPayload, PurchaseAttachmentDTO
 } from './types';
 
 export class ApiError extends Error {
@@ -51,13 +53,24 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     DUPLICATE_INVENTORY_ITEM: 'An active inventory item already uses this name.',
     ITEM_HAS_STOCK_HISTORY: 'Base unit cannot change after stock activity has started.',
     ITEM_IN_USE: 'Cannot archive inventory item that is in use by pending purchases or operations.',
-    DUPLICATE_SUPPLIER: 'An active supplier already uses this name.'
+    DUPLICATE_SUPPLIER: 'An active supplier already uses this name.',
+    PURCHASE_ALREADY_RECEIVED: 'This purchase has already been received.',
+    PURCHASE_NOT_RECEIVABLE: 'Purchase cannot be received in its current status.',
+    PURCHASE_NOT_EDITABLE: 'Only draft purchases can be edited.',
+    PURCHASE_ALREADY_REVERSED: 'This purchase has already been reversed.',
+    PURCHASE_NOT_REVERSIBLE: 'Only received purchases can be reversed.',
+    SUPPLIER_INACTIVE: 'Selected supplier is inactive or archived.',
+    INVENTORY_ITEM_ARCHIVED: 'One or more selected inventory items are archived.',
+    INSUFFICIENT_STOCK: 'Cannot reverse purchase: stock has already been consumed and would result in negative balance.',
+    IDEMPOTENCY_KEY_REUSED: 'This request was already submitted. Please refresh and check current state.'
   };
 
   if (!response.ok) {
     const errorObj = data.error || {};
     const code = errorObj.code || (response.status === 401 ? 'UNAUTHORIZED' : 'UNKNOWN_ERROR');
-    const safeMessage = SAFE_ERROR_MAPPINGS[code] || errorObj.message || 'An unexpected error occurred. Please try again.';
+    const safeMessage = (code === 'VALIDATION_ERROR' && errorObj.message)
+      ? errorObj.message
+      : (SAFE_ERROR_MAPPINGS[code] || errorObj.message || 'An unexpected error occurred. Please try again.');
     throw new ApiError(safeMessage, code, response.status, data.requestId);
   }
 
@@ -218,6 +231,80 @@ export const api = {
     if (params?.pageSize) query.set('pageSize', String(params.pageSize));
     const queryStr = query.toString();
     return request<SupplierPurchaseSummaryDTO>(`/api/suppliers/${id}/purchase-summary${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  // Module 3: Purchase Management
+  listPurchases: (params?: PurchaseListParams) => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.set('startDate', params.startDate);
+    if (params?.endDate) query.set('endDate', params.endDate);
+    if (params?.supplierId) query.set('supplierId', params.supplierId);
+    if (params?.inventoryItemId) query.set('inventoryItemId', params.inventoryItemId);
+    if (params?.paymentMethod) query.set('paymentMethod', params.paymentMethod);
+    if (params?.status) query.set('status', params.status);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+    const queryStr = query.toString();
+    return request<PurchaseListResultDTO>(`/api/purchases${queryStr ? `?${queryStr}` : ''}`);
+  },
+  getPurchaseById: (id: string) =>
+    request<{ purchase: PurchaseDTO }>(`/api/purchases/${id}`),
+  createPurchaseDraft: (payload: CreatePurchaseDraftPayload) =>
+    request<{ purchase: PurchaseDTO }>('/api/purchases', { method: 'POST', body: JSON.stringify(payload) }),
+  updatePurchaseDraft: (id: string, payload: UpdatePurchaseDraftPayload) =>
+    request<{ purchase: PurchaseDTO }>(`/api/purchases/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  receivePurchase: (id: string, idempotencyKey: string) =>
+    request<{ purchase: PurchaseDTO }>(`/api/purchases/${id}/receive`, { method: 'POST' }, idempotencyKey),
+  reversePurchase: (id: string, reason: string, idempotencyKey: string) =>
+    request<{ purchase: PurchaseDTO }>(`/api/purchases/${id}/reverse`, { method: 'POST', body: JSON.stringify({ reason }) }, idempotencyKey),
+  uploadPurchaseAttachment: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`/api/purchases/${id}/attachment`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const errorObj = data.error || {};
+      const message = errorObj.message || 'Failed to upload attachment.';
+      throw new ApiError(message, errorObj.code || 'UPLOAD_FAILED', response.status, data.requestId);
+    }
+    return data.data as { attachment: PurchaseAttachmentDTO; purchaseId: string };
+  },
+  downloadPurchaseAttachment: async (id: string, fallbackFileName?: string) => {
+    const response = await fetch(`/api/purchases/${id}/attachment`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const errorObj = data.error || {};
+      throw new ApiError(errorObj.message || 'Failed to download attachment.', errorObj.code || 'DOWNLOAD_FAILED', response.status);
+    }
+    const blob = await response.blob();
+    let filename = fallbackFileName || 'invoice';
+    const disposition = response.headers.get('Content-Disposition');
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename=["']?([^"';]+)["']?/);
+      if (match && match[1]) {
+        filename = match[1];
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    }, 2000);
   }
 };
 

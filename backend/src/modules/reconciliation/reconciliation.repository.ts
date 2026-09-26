@@ -92,6 +92,18 @@ export class ReconciliationRepository {
     return rows[0].total;
   }
 
+  static async getReceivedPurchasesByMethod(businessDate: string, method: 'CASH' | 'UPI' | 'CARD' | 'CREDIT'): Promise<string> {
+    const text = `
+      SELECT COALESCE(SUM(grand_total), 0.00) as total
+      FROM purchases
+      WHERE purchase_date = $1
+        AND status = 'RECEIVED'
+        AND payment_method = $2;
+    `;
+    const { rows } = await query(text, [businessDate, method]);
+    return rows[0].total;
+  }
+
   static async recordSettlement(params: {
     businessDate: string;
     method: 'UPI' | 'CARD';

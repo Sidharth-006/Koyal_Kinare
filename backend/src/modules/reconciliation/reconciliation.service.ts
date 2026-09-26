@@ -31,6 +31,7 @@ export class ReconciliationService {
       openingRecord,
       cashSales,
       cashExpenses,
+      cashPurchases,
       upiSales,
       upiSettlementRecord,
       cardSales,
@@ -40,6 +41,7 @@ export class ReconciliationService {
       ReconciliationRepository.getOpeningCash(date),
       ReconciliationRepository.getCompletedPaymentsByMethod(date, 'CASH'),
       ReconciliationRepository.getActiveExpensesByMethod(date, 'CASH'),
+      ReconciliationRepository.getReceivedPurchasesByMethod(date, 'CASH'),
       ReconciliationRepository.getCompletedPaymentsByMethod(date, 'UPI'),
       ReconciliationRepository.getSettlement(date, 'UPI'),
       ReconciliationRepository.getCompletedPaymentsByMethod(date, 'CARD'),
@@ -48,7 +50,9 @@ export class ReconciliationService {
     ]);
 
     const openingCash = openingRecord ? openingRecord.opening_cash : '0.00';
-    const expectedClosingCash = subtractMoney(addMoney(openingCash, cashSales), cashExpenses);
+    // Expected Cash = Opening Cash + Cash Sales - Cash Expenses - Cash Purchases
+    const cashBeforePurchases = subtractMoney(addMoney(openingCash, cashSales), cashExpenses);
+    const expectedClosingCash = subtractMoney(cashBeforePurchases, cashPurchases);
 
     const upiSettlement = upiSettlementRecord ? upiSettlementRecord.settlement_amount : '0.00';
     const upiDifference = subtractMoney(upiSettlement, upiSales);
@@ -93,6 +97,9 @@ export class ReconciliationService {
       cashExpenses,
       totalCashExpenses: cashExpenses,
       total_cash_expenses: cashExpenses,
+      cashPurchases,
+      totalCashPurchases: cashPurchases,
+      total_cash_purchases: cashPurchases,
       expectedCash: expectedClosingCash,
       expectedClosingCash,
       expected_closing_cash: expectedClosingCash,
