@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Receipt, SlidersHorizontal,
-  BarChart3, FileText, Settings, LogOut, Coffee, Calendar, User, Menu as MenuIcon, X, Sparkles, Package, Truck, ShoppingCart
+  BarChart3, FileText, Settings, LogOut, Coffee, Calendar, User, Menu as MenuIcon, X, Sparkles, Package, Truck, ShoppingCart, History
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api } from '@/lib/api';
@@ -44,6 +44,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
     { href: '/pos', label: 'POS / Billing', icon: ShoppingBag },
     { href: '/menu', label: 'Menu', icon: UtensilsCrossed },
     { href: '/inventory/items', label: 'Inventory Items', icon: Package },
+    { href: '/inventory/movements', label: 'Stock Ledger', icon: History },
     { href: '/suppliers', label: 'Suppliers', icon: Truck },
     { href: '/purchases', label: 'Purchases', icon: ShoppingCart },
     { href: '/expenses', label: 'Expenses', icon: Receipt },
@@ -82,7 +83,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
           <nav className="flex flex-col gap-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              const isActive = item.href === '/inventory/items'
+                ? pathname === '/inventory/items' || (pathname?.startsWith('/inventory/') && !pathname?.startsWith('/inventory/movements'))
+                : pathname === item.href || pathname?.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}
@@ -149,7 +152,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
           <nav className="flex flex-col gap-2">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = item.href === '/inventory/items'
+                ? pathname === '/inventory/items' || (pathname?.startsWith('/inventory/') && !pathname?.startsWith('/inventory/movements'))
+                : pathname === item.href || pathname?.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}

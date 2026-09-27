@@ -6,7 +6,11 @@ import {
   SupplierDTO, SupplierListResultDTO, SupplierPurchaseSummaryDTO,
   CreateSupplierPayload, UpdateSupplierPayload, SupplierListParams,
   PurchaseDTO, PurchaseListResultDTO, PurchaseListParams,
-  CreatePurchaseDraftPayload, UpdatePurchaseDraftPayload, PurchaseAttachmentDTO
+  CreatePurchaseDraftPayload, UpdatePurchaseDraftPayload, PurchaseAttachmentDTO,
+  StockMovementDTO, ItemStockSummaryDTO, StockCountDTO, StockMovementListParams,
+  StockMovementListResultDTO, RecordOpeningStockPayload, RecordAdjustmentPayload,
+  RecordStockCountPayload, RecordOpeningStockResultDTO, RecordAdjustmentResultDTO,
+  RecordStockCountResultDTO
 } from './types';
 
 export class ApiError extends Error {
@@ -61,7 +65,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     PURCHASE_NOT_REVERSIBLE: 'Only received purchases can be reversed.',
     SUPPLIER_INACTIVE: 'Selected supplier is inactive or archived.',
     INVENTORY_ITEM_ARCHIVED: 'One or more selected inventory items are archived.',
-    INSUFFICIENT_STOCK: 'Cannot reverse purchase: stock has already been consumed and would result in negative balance.',
+    INSUFFICIENT_STOCK: 'This change would make stock negative. Review the current quantity.',
+    DUPLICATE_OPENING_STOCK: 'Opening stock has already been recorded for this item on the selected date.',
+    DUPLICATE_MOVEMENT: 'A stock movement for this source reference has already been recorded.',
     IDEMPOTENCY_KEY_REUSED: 'This request was already submitted. Please refresh and check current state.'
   };
 
@@ -305,7 +311,41 @@ export const api = {
       }
       URL.revokeObjectURL(url);
     }, 2000);
-  }
+  },
+
+  // Module 4: Stock Ledger & Physical Counts
+  getItemStock: (id: string) =>
+    request<ItemStockSummaryDTO>(`/api/inventory/items/${id}/stock`),
+
+  listStockMovements: (params?: StockMovementListParams) => {
+    const query = new URLSearchParams();
+    if (params?.itemId) query.set('itemId', params.itemId);
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    if (params?.type) query.set('type', params.type);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+    const queryStr = query.toString();
+    return request<StockMovementListResultDTO>(`/api/stock/movements${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  recordOpeningStock: (payload: RecordOpeningStockPayload, idempotencyKey?: string) =>
+    request<RecordOpeningStockResultDTO>('/api/stock/opening', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, idempotencyKey),
+
+  recordStockAdjustment: (payload: RecordAdjustmentPayload, idempotencyKey?: string) =>
+    request<RecordAdjustmentResultDTO>('/api/stock/adjustments', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, idempotencyKey),
+
+  recordStockCount: (payload: RecordStockCountPayload, idempotencyKey?: string) =>
+    request<RecordStockCountResultDTO>('/api/stock/counts', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, idempotencyKey)
 };
 
 export function downloadExportFile(exportData: ExportResultDTO, filename: string) {

@@ -558,4 +558,125 @@ export interface PurchaseAttachmentDTO {
   createdAt?: string;
 }
 
+// Module 4: Stock Ledger and Physical Counts Types
+export type StockMovementType =
+  | 'OPENING'
+  | 'PURCHASE_RECEIPT'
+  | 'PURCHASE_REVERSAL'
+  | 'MANUAL_INCREASE'
+  | 'MANUAL_DECREASE'
+  | 'WASTAGE'
+  | 'MANUAL_CONSUMPTION'
+  | 'COUNT_CORRECTION';
+
+export interface StockMovementDTO {
+  id: string;
+  inventory_item_id: string;
+  inventoryItemId?: string;
+  business_date: string;
+  businessDate?: string;
+  movement_type: StockMovementType;
+  movementType?: StockMovementType;
+  quantity_delta: string;
+  quantityDelta?: string;
+  unit_cost: string | null;
+  unitCost?: string | null;
+  source_type: string;
+  sourceType?: string;
+  source_id: string;
+  sourceId?: string;
+  reason: string | null;
+  created_by: string | null;
+  createdBy?: string | null;
+  created_at: string;
+  createdAt?: string;
+}
+
+export interface ItemStockSummaryDTO {
+  inventoryItemId: string;
+  name: string;
+  baseUnit: InventoryBaseUnit | string;
+  availableQuantity: string;
+  minimumStock: string;
+  isLowStock: boolean;
+  lastMovementAt: string | null;
+}
+
+export interface StockCountDTO {
+  id: string;
+  inventory_item_id: string;
+  inventoryItemId?: string;
+  business_date: string;
+  businessDate?: string;
+  expected_quantity: string;
+  expectedQuantity?: string;
+  actual_quantity: string;
+  actualQuantity?: string;
+  variance_quantity: string;
+  varianceQuantity?: string;
+  reason: string | null;
+  counted_by: string;
+  countedBy?: string;
+  confirmed_at: string;
+  confirmedAt?: string;
+}
+
+export interface StockMovementListParams {
+  itemId?: string;
+  from?: string;
+  to?: string;
+  type?: StockMovementType;
+  page?: number | string;
+  pageSize?: number | string;
+}
+
+export interface StockMovementListResultDTO {
+  items: StockMovementDTO[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface RecordOpeningStockPayload {
+  inventoryItemId: string;
+  quantity: number | string;
+  businessDate?: string;
+  note?: string;
+}
+
+export interface RecordAdjustmentPayload {
+  inventoryItemId: string;
+  type: 'MANUAL_INCREASE' | 'MANUAL_DECREASE' | 'WASTAGE' | 'MANUAL_CONSUMPTION';
+  quantity: number | string;
+  businessDate?: string;
+  reason?: string;
+}
+
+export interface RecordStockCountPayload {
+  inventoryItemId: string;
+  actualQuantity: number | string;
+  businessDate?: string;
+  reason?: string;
+}
+
+export interface RecordOpeningStockResultDTO {
+  movement: StockMovementDTO;
+  resultingBalance: string;
+}
+
+export interface RecordAdjustmentResultDTO {
+  movement: StockMovementDTO;
+  resultingBalance: string;
+}
+
+export interface RecordStockCountResultDTO {
+  stockCount: StockCountDTO;
+  movementCreated: boolean;
+  movement?: StockMovementDTO;
+  resultingBalance: string;
+}
+
 

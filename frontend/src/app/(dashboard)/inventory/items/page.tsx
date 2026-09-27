@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { InventoryItemDTO, InventoryItemType, InventoryBaseUnit } from '@/lib/types';
 import { formatDate } from '@/lib/format';
@@ -14,7 +15,8 @@ import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Plus, Search, Package, Edit, Archive, RotateCcw,
-  ChevronLeft, ChevronRight, AlertTriangle, RefreshCw
+  ChevronLeft, ChevronRight, AlertTriangle, RefreshCw,
+  History, Layers
 } from 'lucide-react';
 
 const ITEM_TYPES: { label: string; value: InventoryItemType }[] = [
@@ -314,13 +316,23 @@ export default function InventoryItemsPage() {
             Manage raw materials, packaging, units, and minimum stock thresholds
           </p>
         </div>
-        <Button
-          variant="primary"
-          icon={<Plus className="w-4 h-4" />}
-          onClick={openCreateModal}
-        >
-          Add Item
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Link href="/inventory/movements">
+            <Button
+              variant="secondary"
+              icon={<History className="w-4 h-4 text-forest-800" />}
+            >
+              Stock Ledger
+            </Button>
+          </Link>
+          <Button
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={openCreateModal}
+          >
+            Add Item
+          </Button>
+        </div>
       </div>
 
       {/* Filter & Control Bar */}
@@ -462,6 +474,16 @@ export default function InventoryItemsPage() {
                         {formatDate(item.updated_at || item.created_at)}
                       </td>
                       <td className="p-4 text-right space-x-1.5">
+                        <Link href={`/inventory/${item.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-forest-800 hover:text-forest-900 font-medium"
+                            icon={<Layers className="w-3.5 h-3.5 text-forest-700" />}
+                          >
+                            View Stock
+                          </Button>
+                        </Link>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -557,6 +579,16 @@ export default function InventoryItemsPage() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-1 border-t border-border/40">
+                  <Link href={`/inventory/${item.id}`}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-forest-800 hover:text-forest-900 font-medium"
+                      icon={<Layers className="w-3.5 h-3.5 text-forest-700" />}
+                    >
+                      View Stock
+                    </Button>
+                  </Link>
                   <Button variant="ghost" size="sm" onClick={() => openEditModal(item)} icon={<Edit className="w-3.5 h-3.5" />}>
                     Edit
                   </Button>
