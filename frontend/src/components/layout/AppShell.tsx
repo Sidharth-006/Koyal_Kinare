@@ -57,8 +57,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
   return (
     <div className="min-h-screen bg-background text-slate-800 flex flex-col md:flex-row font-sans">
       {/* Desktop & Tablet Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-forest-800 text-white shrink-0 p-4 justify-between sticky top-0 h-screen shadow-elevated border-r border-forest-900/30">
-        <div>
+      <aside className="hidden md:flex flex-col w-64 bg-forest-800 text-white shrink-0 p-4 sticky top-0 h-screen overflow-y-auto scrollbar-none shadow-elevated border-r border-forest-900/30">
+        <div className="flex flex-col">
           {/* Cafe Identity Brand */}
           <div className="flex items-center gap-3.5 px-3 py-3.5 mb-5 border-b border-forest-700/50">
             <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-2xl border border-amber-400/30 shadow-inner">
@@ -80,7 +80,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex flex-col gap-1.5">
+          <nav className="flex flex-col gap-1.5 pb-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.href === '/inventory/items'
@@ -106,7 +106,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
         </div>
 
         {/* User Account & Logout */}
-        <div className="pt-4 border-t border-forest-700/50 flex flex-col gap-3">
+        <div className="pt-4 mt-auto border-t border-forest-700/50 flex flex-col gap-3 shrink-0">
           <div className="flex items-center gap-3 px-3 py-2 bg-forest-900/30 rounded-xl border border-forest-700/40">
             <div className="p-2 bg-forest-700 text-amber-300 rounded-lg">
               <User className="w-4 h-4" />
@@ -120,7 +120,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-300 hover:bg-rose-500/15 hover:text-rose-200 transition-colors min-h-[44px] border border-rose-500/20"
+            className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-300 hover:bg-rose-500/15 hover:text-rose-200 transition-colors min-h-[44px] border border-rose-500/20 bg-rose-950/20"
           >
             <LogOut className="w-4 h-4" />
             <span>{isLoggingOut ? 'Logging out...' : 'Sign Out'}</span>

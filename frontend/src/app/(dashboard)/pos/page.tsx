@@ -31,6 +31,9 @@ export default function POSPage() {
   const [discountInput, setDiscountInput] = useState<string>('0');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
 
+  // Mobile View Tab (Catalog vs Order)
+  const [mobileTab, setMobileTab] = useState<'CATALOG' | 'ORDER'>('CATALOG');
+
   // Checkout & Idempotency
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -162,9 +165,49 @@ export default function POSPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-5.5rem)] flex flex-col lg:flex-row gap-5 overflow-hidden font-sans">
+    <div className="lg:h-[calc(100vh-5.5rem)] flex flex-col lg:flex-row gap-5 overflow-y-auto lg:overflow-hidden font-sans pb-4 lg:pb-0">
+      {/* Mobile Tab Switcher (Visible only on mobile/small viewports) */}
+      <div className="lg:hidden flex p-1 bg-cream-200/90 rounded-2xl border border-border shadow-2xs shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileTab('CATALOG')}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px] ${
+            mobileTab === 'CATALOG'
+              ? 'bg-forest-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-forest-800'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" />
+          <span>Menu Catalog ({catalog?.items?.length || 0})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('ORDER')}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px] ${
+            mobileTab === 'ORDER'
+              ? 'bg-forest-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-forest-800'
+          }`}
+        >
+          <span>Current Order</span>
+          {cart.length > 0 && (
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+                mobileTab === 'ORDER' ? 'bg-amber-400 text-forest-900' : 'bg-forest-800 text-white'
+              }`}
+            >
+              {cart.reduce((s, i) => s + i.quantity, 0)}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* LEFT PANE: CATALOG & CATEGORIES */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white border border-border rounded-2xl shadow-card overflow-hidden">
+      <div
+        className={`flex-none lg:flex-1 flex flex-col min-w-0 bg-white border border-border rounded-2xl shadow-card overflow-hidden ${
+          mobileTab !== 'CATALOG' ? 'hidden lg:flex' : 'flex'
+        }`}
+      >
         {/* Search & Categories Bar */}
         <div className="p-4 md:p-5 border-b border-border space-y-3.5 bg-cream-50/50">
           <div className="flex gap-2.5 items-center">
@@ -212,7 +255,7 @@ export default function POSPage() {
         </div>
 
         {/* Item Grid */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-5 bg-cream-50/20">
+        <div className="lg:flex-1 overflow-y-auto p-4 md:p-5 bg-cream-50/20">
           {loadingCatalog ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
               {[...Array(8)].map((_, i) => (
@@ -220,7 +263,7 @@ export default function POSPage() {
               ))}
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+            <div className="flex flex-col items-center justify-center text-slate-400 py-12">
               <ShoppingBag className="w-10 h-10 mb-2 stroke-1" />
               <p className="text-sm font-medium">No menu items found</p>
             </div>
@@ -230,33 +273,42 @@ export default function POSPage() {
                 const isAvail = item.is_available ?? item.isAvailable ?? true;
                 const price = item.selling_price || item.sellingPrice;
                 const catName = item.category_name || item.categoryName;
+                const cartEntry = cart.find(ci => ci.menuItem.id === item.id);
+                const qtyInCart = cartEntry?.quantity || 0;
+
                 return (
                   <button
                     key={item.id}
                     onClick={() => addToCart(item)}
                     disabled={!isAvail}
-                    className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all min-h-[110px] relative overflow-hidden group shadow-2xs ${
+                    className={`p-3.5 lg:p-4 rounded-2xl border text-left flex flex-col justify-between transition-all min-h-[110px] relative overflow-hidden group shadow-2xs ${
                       !isAvail
                         ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
+                        : qtyInCart > 0
+                        ? 'bg-forest-50/40 border-forest-800/50 shadow-sm hover:border-forest-800 hover:shadow-card-hover active:scale-[0.98]'
                         : 'bg-white border-border hover:border-forest-800/40 hover:shadow-card-hover active:scale-[0.98]'
                     }`}
                   >
                     <div>
                       <div className="flex justify-between items-start gap-1">
                         <h3 className="font-bold text-forest-800 text-sm line-clamp-2 leading-snug">{item.name}</h3>
-                        {!isAvail && (
+                        {!isAvail ? (
                           <span className="text-[10px] px-1.5 py-0.5 bg-rose-100 text-rose-700 font-bold rounded">
                             OUT
                           </span>
-                        )}
+                        ) : qtyInCart > 0 ? (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-forest-800 text-white font-extrabold rounded-full shrink-0">
+                            {qtyInCart} in cart
+                          </span>
+                        ) : null}
                       </div>
                       <span className="text-[11px] text-slate-500 mt-1 block font-medium">{catName || 'General'}</span>
                     </div>
-                    <div className="mt-3 flex justify-between items-center">
+                    <div className="mt-2.5 flex justify-between items-center">
                       <span className="text-forest-800 font-extrabold text-sm">
                         {formatINR(price)}
                       </span>
-                      <span className="text-xs font-bold text-forest-800 group-hover:underline flex items-center gap-0.5">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-white bg-forest-800 rounded-lg px-2.5 py-1.5 min-h-[34px] group-hover:bg-forest-900 active:bg-forest-950 transition-colors shadow-sm">
                         <Plus className="w-3.5 h-3.5" /> Add
                       </span>
                     </div>
@@ -266,24 +318,56 @@ export default function POSPage() {
             </div>
           )}
         </div>
+
+        {/* Mobile Floating Cart Summary Bar */}
+        {cart.length > 0 && (
+          <div className="lg:hidden p-3 bg-white/95 backdrop-blur border-t border-border shadow-elevated">
+            <button
+              onClick={() => setMobileTab('ORDER')}
+              className="w-full flex items-center justify-between bg-forest-800 hover:bg-forest-900 active:bg-forest-950 text-white px-4 py-3 rounded-xl font-bold text-sm shadow-md transition-all min-h-[48px]"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-full bg-amber-400 text-forest-900 text-xs flex items-center justify-center font-extrabold">
+                  {cart.reduce((s, i) => s + i.quantity, 0)}
+                </span>
+                <span>View Current Order</span>
+              </div>
+              <span className="font-serif font-extrabold text-amber-300 text-base">
+                {formatINR(previewTotal)} →
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* RIGHT PANE: CART & BILLING */}
-      <div className="w-full lg:w-[420px] flex flex-col bg-white border border-border rounded-2xl overflow-hidden shadow-card">
+      <div
+        className={`w-full lg:w-[420px] flex flex-col bg-white border border-border rounded-2xl overflow-hidden shadow-card ${
+          mobileTab !== 'ORDER' ? 'hidden lg:flex' : 'flex'
+        }`}
+      >
         {/* Cart Header */}
         <div className="p-4 md:p-5 border-b border-border bg-cream-50/60 flex justify-between items-center">
           <div className="flex items-center gap-2.5">
             <h2 className="font-serif font-bold text-lg text-forest-800">Current Order</h2>
             <Badge variant="forest">{cart.reduce((s, i) => s + i.quantity, 0)} items</Badge>
           </div>
-          {cart.length > 0 && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={clearCart}
-              className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2.5 py-1 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1"
+              onClick={() => setMobileTab('CATALOG')}
+              className="lg:hidden text-xs text-forest-800 font-bold px-2.5 py-1.5 bg-cream-100 hover:bg-cream-200 border border-border rounded-lg flex items-center gap-1 min-h-[36px] transition-colors"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Clear
+              + Add Items
             </button>
-          )}
+            {cart.length > 0 && (
+              <button
+                onClick={clearCart}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2.5 py-1 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 min-h-[36px]"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Clear
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Order Type & Table Selection */}
