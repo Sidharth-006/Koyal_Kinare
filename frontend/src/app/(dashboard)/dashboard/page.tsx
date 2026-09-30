@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   TrendingUp, ShoppingBag, Receipt, SlidersHorizontal, Info, RefreshCw,
-  CreditCard, DollarSign, Wallet, AlertCircle, ArrowUpRight, Award, Flame, Calendar
+  CreditCard, DollarSign, Wallet, AlertCircle, ArrowUpRight, Award, Flame, Calendar,
+  AlertTriangle, Package, CheckCircle2
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
 import { api } from '@/lib/api';
-import { DashboardMetricsDTO } from '@/lib/types';
+import { DashboardMetricsDTO, InventoryOverviewDTO } from '@/lib/types';
 import { formatINR, getTodayIsoDate } from '@/lib/format';
 import { useToast } from '@/components/ui/ToastContext';
 
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<string>(getTodayIsoDate());
   const [metrics, setMetrics] = useState<DashboardMetricsDTO | null>(null);
   const [recon, setRecon] = useState<any>(null);
+  const [inventoryOverview, setInventoryOverview] = useState<InventoryOverviewDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
@@ -28,15 +30,19 @@ export default function DashboardPage() {
   const fetchMetrics = useCallback(async (dateStr: string) => {
     try {
       setIsRefreshing(true);
-      const [metricsRes, reconRes] = await Promise.allSettled([
+      const [metricsRes, reconRes, invRes] = await Promise.allSettled([
         api.getDashboardMetrics(dateStr),
-        api.getReconciliationPreview(dateStr)
+        api.getReconciliationPreview(dateStr),
+        api.getInventoryOverview()
       ]);
       if (metricsRes.status === 'fulfilled') {
         setMetrics(metricsRes.value.metrics);
       }
       if (reconRes.status === 'fulfilled') {
         setRecon(reconRes.value.reconciliation);
+      }
+      if (invRes.status === 'fulfilled') {
+        setInventoryOverview(invRes.value);
       }
     } catch (err: any) {
       showToast(err.message || 'Failed to load dashboard metrics', 'error');
@@ -179,6 +185,60 @@ export default function DashboardPage() {
           </Button>
         </Link>
       </div>
+
+      {/* Low-Stock Operational Alert Card */}
+      {inventoryOverview && (() => {
+        const lowCount = inventoryOverview.activeLowStockCount ?? inventoryOverview.lowStockCount ?? inventoryOverview.active_low_stock_count ?? 0;
+        const totalItems = inventoryOverview.totalActiveItems ?? inventoryOverview.activeItemsCount ?? inventoryOverview.total_active_items ?? 0;
+        const hasLowStock = lowCount > 0;
+
+        return (
+          <Card className={`border ${hasLowStock ? 'bg-amber-50/60 border-amber-300 shadow-2xs' : 'bg-white border-border shadow-2xs'}`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${hasLowStock ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-800'}`}>
+                  {hasLowStock ? (
+                    <AlertTriangle className="w-5 h-5" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-slate-800">
+                      {hasLowStock
+                        ? `Low-Stock Operational Alert (${lowCount} Item${lowCount > 1 ? 's' : ''})`
+                        : 'Inventory Stock Levels Healthy'}
+                    </h2>
+                    {hasLowStock ? (
+                      <Badge variant="warning">Action Required</Badge>
+                    ) : (
+                      <Badge variant="success">Optimal</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                    {hasLowStock
+                      ? `${lowCount} active inventory item${lowCount > 1 ? 's are' : ' is'} at or below minimum threshold.`
+                      : `All ${totalItems} active inventory items are above minimum stock levels.`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <Link href="/inventory/low-stock">
+                  <Button
+                    variant={hasLowStock ? 'primary' : 'secondary'}
+                    size="sm"
+                    className={hasLowStock ? 'bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs' : 'text-xs font-bold'}
+                  >
+                    {hasLowStock ? 'Review Low-Stock Alerts' : 'View Stock Status'}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Daily Closing & Register Status Alert Banner */}
       {recon && (

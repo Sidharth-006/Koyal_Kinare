@@ -125,4 +125,23 @@ export class InventoryItemArchivedError extends AppError {
   }
 }
 
+export class ItemNotLowStockError extends AppError {
+  constructor(message: string = 'Item is not currently in low stock.') {
+    super(message, 'ITEM_NOT_LOW_STOCK', 400);
+  }
+}
+
+export class ReportTooLargeError extends AppError {
+  constructor(message: string = 'Requested report date range exceeds maximum allowed range (366 days).') {
+    super(message, 'REPORT_TOO_LARGE', 400);
+  }
+}
+
+export class ExportFailedError extends AppError {
+  constructor(message: string = 'Report export generation failed.') {
+    super(message, 'EXPORT_FAILED', 500);
+  }
+}
+
+
 

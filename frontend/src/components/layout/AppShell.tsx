@@ -84,7 +84,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.href === '/inventory/items'
-                ? pathname === '/inventory/items' || (pathname?.startsWith('/inventory/') && !pathname?.startsWith('/inventory/movements'))
+                ? pathname === '/inventory/items' || (pathname?.startsWith('/inventory/') && !pathname?.startsWith('/inventory/movements') && !pathname?.startsWith('/inventory/low-stock') && pathname !== '/inventory')
                 : pathname === item.href || pathname?.startsWith(`${item.href}/`);
               return (
                 <Link
@@ -153,7 +153,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.href === '/inventory/items'
-                ? pathname === '/inventory/items' || (pathname?.startsWith('/inventory/') && !pathname?.startsWith('/inventory/movements'))
+                ? pathname === '/inventory/items' || (pathname?.startsWith('/inventory/') && !pathname?.startsWith('/inventory/movements') && !pathname?.startsWith('/inventory/low-stock') && pathname !== '/inventory')
                 : pathname === item.href || pathname?.startsWith(`${item.href}/`);
               return (
                 <Link

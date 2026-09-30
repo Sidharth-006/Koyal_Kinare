@@ -679,4 +679,153 @@ export interface RecordStockCountResultDTO {
   resultingBalance: string;
 }
 
+// Module 5: Inventory Alerts, Reports & Financial Integration Types
+export interface InventoryOverviewDTO {
+  activeItemsCount?: number;
+  totalActiveItems?: number;
+  total_active_items?: number;
+  lowStockCount?: number;
+  activeLowStockCount?: number;
+  active_low_stock_count?: number;
+  recentPurchases: PurchaseDTO[];
+  recentMovements: StockMovementDTO[];
+}
+
+export interface LowStockAcknowledgementDTO {
+  id?: string;
+  item_id?: string;
+  itemId?: string;
+  note?: string | null;
+  acknowledged_at?: string;
+  acknowledgedAt?: string;
+  acknowledged_by?: string;
+  acknowledgedBy?: string;
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface LowStockItemDTO {
+  id: string;
+  name: string;
+  itemType?: InventoryItemType;
+  item_type?: InventoryItemType;
+  baseUnit?: InventoryBaseUnit | string;
+  base_unit?: InventoryBaseUnit | string;
+  minimumStock?: string | number;
+  minimum_stock?: string | number;
+  minimumQuantity?: string | number;
+  minimum_quantity?: string | number;
+  currentQuantity?: string | number;
+  current_quantity?: string | number;
+  availableQuantity?: string | number;
+  available_quantity?: string | number;
+  deficitQuantity?: string | number;
+  deficit_quantity?: string | number;
+  lastMovementAt?: string | null;
+  last_movement_at?: string | null;
+  lastMovement?: string | null;
+  last_movement?: string | null;
+  isAcknowledged?: boolean;
+  is_acknowledged?: boolean;
+  acknowledgedAt?: string | null;
+  acknowledged_at?: string | null;
+  acknowledgedBy?: string | null;
+  acknowledged_by?: string | null;
+  acknowledgementNote?: string | null;
+  acknowledgement_note?: string | null;
+  latestAcknowledgement?: LowStockAcknowledgementDTO | null;
+  latest_acknowledgement?: LowStockAcknowledgementDTO | null;
+}
+
+export interface LowStockPaginationDTO {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface LowStockListResultDTO {
+  items: LowStockItemDTO[];
+  pagination: LowStockPaginationDTO;
+}
+
+export interface AcknowledgeAlertPayload {
+  note?: string;
+}
+
+export interface Phase2ProfitabilityPeriodDTO {
+  businessDate: string;
+  grossSales: string | number;
+  discounts: string | number;
+  netSales: string | number;
+  taxes: string | number;
+  purchases: string | number;
+  expenses: string | number;
+  netProfit: string | number;
+}
+
+export interface Phase2ProfitabilityDTO {
+  startDate: string;
+  endDate: string;
+  grossSales: string | number;
+  totalDiscounts: string | number;
+  netSales: string | number;
+  totalTaxes: string | number;
+  totalRevenue: string | number;
+  purchasesTotal: string | number;
+  totalPurchases: string | number;
+  expensesTotal: string | number;
+  totalExpenses: string | number;
+  estimatedGrossProfit?: string | number;
+  estimatedNetProfit: string | number;
+  netProfit: string | number;
+  isEstimate: boolean;
+  disclaimer: string;
+  profitDisclaimer?: string;
+  periods?: Phase2ProfitabilityPeriodDTO[];
+  periodBreakdown?: Phase2ProfitabilityPeriodDTO[];
+}
+
+export interface InventoryStockReportParams {
+  asOf?: string;
+  format?: 'XLSX' | 'PDF';
+}
+
+export interface StockMovementsReportParams {
+  from?: string;
+  to?: string;
+  itemId?: string;
+  movementType?: StockMovementType | string;
+  format?: 'XLSX' | 'PDF';
+}
+
+export interface PurchasesReportParams {
+  from?: string;
+  to?: string;
+  supplierId?: string;
+  itemId?: string;
+  paymentMethod?: PurchasePaymentMethod | string;
+  status?: PurchaseStatus | string;
+  format?: 'XLSX' | 'PDF';
+}
+
+export interface SupplierSummaryReportParams {
+  from?: string;
+  to?: string;
+  format?: 'XLSX' | 'PDF';
+}
+
+export interface WastageReportParams {
+  from?: string;
+  to?: string;
+  format?: 'XLSX' | 'PDF';
+}
+
+export interface Phase2ProfitabilityReportParams {
+  from?: string;
+  to?: string;
+  format?: 'XLSX' | 'PDF';
+}
+
+
 

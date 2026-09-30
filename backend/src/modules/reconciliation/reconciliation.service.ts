@@ -100,6 +100,7 @@ export class ReconciliationService {
       cashPurchases,
       totalCashPurchases: cashPurchases,
       total_cash_purchases: cashPurchases,
+      cashPurchaseTotal: cashPurchases,
       expectedCash: expectedClosingCash,
       expectedClosingCash,
       expected_closing_cash: expectedClosingCash,

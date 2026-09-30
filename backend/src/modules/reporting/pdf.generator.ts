@@ -44,7 +44,19 @@ export class PdfGenerator {
     this.renderHeader(metadata);
 
     // Determine type of data and render appropriately
-    if (this.isDailySummary(data)) {
+    if (this.isInventoryStock(data)) {
+      this.renderInventoryStock(data);
+    } else if (this.isStockMovements(data)) {
+      this.renderStockMovements(data);
+    } else if (this.isPurchasesReport(data)) {
+      this.renderPurchasesReport(data);
+    } else if (this.isSuppliersReport(data)) {
+      this.renderSuppliersReport(data);
+    } else if (this.isWastageReport(data)) {
+      this.renderWastageReport(data);
+    } else if (this.isPhase2Profitability(data)) {
+      this.renderPhase2Profitability(data);
+    } else if (this.isDailySummary(data)) {
       this.renderDailySummary(data);
     } else if (this.isItemSales(data)) {
       this.renderItemSales(data);
@@ -71,7 +83,7 @@ export class PdfGenerator {
   private ensureSpace(neededHeight: number) {
     if (this.yOffset - neededHeight < this.margin + 30) {
       this.addNewPage();
-      this.yOffset -= 20; // small top breathing room on continuation pages
+      this.yOffset -= 20;
     }
   }
 
@@ -84,7 +96,6 @@ export class PdfGenerator {
   }
 
   private renderHeader(metadata: ReportPdfMetadata) {
-    // Green accent bar on top
     this.currentPage.drawRectangle({
       x: 0,
       y: this.pageHeight - 8,
@@ -95,7 +106,6 @@ export class PdfGenerator {
 
     this.yOffset -= 15;
 
-    // Cafe Brand Name
     this.currentPage.drawText('Koyal Kinare Cafe', {
       x: this.margin,
       y: this.yOffset,
@@ -104,7 +114,6 @@ export class PdfGenerator {
       color: this.colorForest
     });
 
-    // Official Report badge
     const badgeText = 'OFFICIAL REPORT';
     const badgeWidth = this.fontBold.widthOfTextAtSize(badgeText, 8) + 12;
     this.currentPage.drawRectangle({
@@ -126,8 +135,7 @@ export class PdfGenerator {
 
     this.yOffset -= 24;
 
-    // Report Title
-    const title = this.sanitize(metadata.reportTitle.replace(' (PDF)', ''));
+    const title = this.sanitize(metadata.reportTitle.replace(/ \((PDF|EXCEL|XLSX)\)/i, ''));
     this.currentPage.drawText(title, {
       x: this.margin,
       y: this.yOffset,
@@ -138,7 +146,6 @@ export class PdfGenerator {
 
     this.yOffset -= 16;
 
-    // Metadata line (Date Range & Generated At)
     const metaStr = `Date Range: ${this.sanitize(metadata.appliedDateRange)}   |   Generated: ${new Date(metadata.generatedAt).toLocaleString('en-IN')}`;
     this.currentPage.drawText(metaStr, {
       x: this.margin,
@@ -150,7 +157,6 @@ export class PdfGenerator {
 
     this.yOffset -= 14;
 
-    // Divider line
     this.currentPage.drawLine({
       start: { x: this.margin, y: this.yOffset },
       end: { x: this.pageWidth - this.margin, y: this.yOffset },
@@ -159,6 +165,32 @@ export class PdfGenerator {
     });
 
     this.yOffset -= 20;
+  }
+
+  // --- TYPE GUARDS ---
+
+  private isInventoryStock(data: any): boolean {
+    return data && (data.reportType === 'INVENTORY_STOCK' || (Array.isArray(data.items) && data.summary && 'totalValuation' in data.summary));
+  }
+
+  private isStockMovements(data: any): boolean {
+    return data && (data.reportType === 'STOCK_MOVEMENTS' || Array.isArray(data.movements));
+  }
+
+  private isPurchasesReport(data: any): boolean {
+    return data && (data.reportType === 'PURCHASES' || (Array.isArray(data.purchases) && data.summary && 'receivedPurchasesTotal' in data.summary));
+  }
+
+  private isSuppliersReport(data: any): boolean {
+    return data && (data.reportType === 'SUPPLIERS' || (Array.isArray(data.suppliers) && data.summary && 'totalSpend' in data.summary));
+  }
+
+  private isWastageReport(data: any): boolean {
+    return data && (data.reportType === 'WASTAGE' || Array.isArray(data.wastageItems));
+  }
+
+  private isPhase2Profitability(data: any): boolean {
+    return data && data.financialSummary && ('phase2EstimatedNetProfit' in data.financialSummary || 'wastageIndicators' in data);
   }
 
   private isDailySummary(data: any): boolean {
@@ -177,10 +209,220 @@ export class PdfGenerator {
     return data && typeof data === 'object' && ('openingCash' in data || 'expectedClosingCash' in data || 'actualCash' in data);
   }
 
-  // --- RENDERERS FOR EACH REPORT TYPE ---
+  // --- MODULE 5 RENDERERS ---
+
+  private renderInventoryStock(data: any) {
+    this.renderSectionTitle('Inventory Valuation & Stock Status Summary');
+
+    const summaryRows = [
+      ['Total Active Items', this.sanitize(data.summary?.totalItems || 0)],
+      ['Low Stock Items Alert Count', this.sanitize(data.summary?.lowStockItemsCount || 0)],
+      ['Total Inventory Valuation', `Rs. ${this.sanitize(data.summary?.totalValuation || '0.00')}`]
+    ];
+    this.renderCustomTable(['Metric', 'Value'], [260, 255], summaryRows);
+
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      this.renderSectionTitle('Item Stock Detail');
+      const rows = data.items.map((it: any) => [
+        this.sanitize(it.itemName),
+        this.sanitize(it.itemType),
+        `${this.sanitize(it.currentQuantity)} ${this.sanitize(it.baseUnit)}`,
+        `${this.sanitize(it.minimumStock)} ${this.sanitize(it.baseUnit)}`,
+        this.sanitize(it.status),
+        it.totalValue ? `Rs. ${this.sanitize(it.totalValue)}` : '-'
+      ]);
+      this.renderCustomTable(
+        ['Item Name', 'Category', 'Current Stock', 'Min Stock', 'Status', 'Valuation'],
+        [140, 85, 80, 70, 65, 75],
+        rows
+      );
+    }
+  }
+
+  private renderStockMovements(data: any) {
+    this.renderSectionTitle('Movement Ledger Summary');
+
+    const summaryRows = [
+      ['Total Recorded Movements', this.sanitize(data.summary?.totalMovements || 0)],
+      ['Total Inbound Quantity', this.sanitize(data.summary?.totalInboundQuantity || '0.000')],
+      ['Total Outbound Quantity', this.sanitize(data.summary?.totalOutboundQuantity || '0.000')],
+      ['Net Change in Period', this.sanitize(data.summary?.netChangeQuantity || '0.000')]
+    ];
+    this.renderCustomTable(['Metric', 'Value'], [260, 255], summaryRows);
+
+    if (Array.isArray(data.movements) && data.movements.length > 0) {
+      this.renderSectionTitle('Movement Audit Trail');
+      const rows = data.movements.map((m: any) => [
+        this.sanitize(m.businessDate),
+        this.sanitize(m.itemName),
+        this.sanitize(m.movementType),
+        `${this.sanitize(m.quantityDelta)} ${this.sanitize(m.baseUnit)}`,
+        m.unitCost ? `Rs. ${this.sanitize(m.unitCost)}` : '-',
+        this.sanitize(m.reason || m.sourceType)
+      ]);
+      this.renderCustomTable(
+        ['Date', 'Item Name', 'Movement Type', 'Quantity Delta', 'Unit Cost', 'Reason / Source'],
+        [65, 120, 110, 80, 60, 80],
+        rows
+      );
+    }
+  }
+
+  private renderPurchasesReport(data: any) {
+    this.renderSectionTitle('Purchase Performance & Financial Breakdown');
+
+    const summaryRows = [
+      ['Received Orders (Financial Spend)', `${this.sanitize(data.summary?.receivedPurchasesCount || 0)} orders (Rs. ${this.sanitize(data.summary?.receivedPurchasesTotal || '0.00')})`],
+      ['Draft Orders (Uncommitted)', `${this.sanitize(data.summary?.draftPurchasesCount || 0)} orders (Rs. ${this.sanitize(data.summary?.draftPurchasesTotal || '0.00')})`],
+      ['Reversed Orders (Annulled)', `${this.sanitize(data.summary?.reversedPurchasesCount || 0)} orders (Rs. ${this.sanitize(data.summary?.reversedPurchasesTotal || '0.00')})`],
+      ['Cash Purchases Settled', `Rs. ${this.sanitize(data.summary?.receivedPaymentSplits?.CASH || '0.00')}`],
+      ['UPI Purchases Settled', `Rs. ${this.sanitize(data.summary?.receivedPaymentSplits?.UPI || '0.00')}`]
+    ];
+    this.renderCustomTable(['Purchase Parameter', 'Summary Metric'], [240, 275], summaryRows);
+
+    if (Array.isArray(data.purchases) && data.purchases.length > 0) {
+      this.renderSectionTitle('Purchases Order Register');
+      const rows = data.purchases.map((p: any) => [
+        this.sanitize(p.purchaseNumber),
+        this.sanitize(p.purchaseDate),
+        this.sanitize(p.supplierName),
+        this.sanitize(p.paymentMethod),
+        this.sanitize(p.status),
+        `Rs. ${this.sanitize(p.grandTotal)}`
+      ]);
+      this.renderCustomTable(
+        ['PO Number', 'Date', 'Supplier Name', 'Payment Mode', 'Status', 'Grand Total'],
+        [100, 65, 160, 75, 60, 55],
+        rows
+      );
+    }
+  }
+
+  private renderSuppliersReport(data: any) {
+    this.renderSectionTitle('Supplier Spend & Performance Overview');
+
+    const summaryRows = [
+      ['Total Active / Utilized Suppliers', this.sanitize(data.summary?.totalSuppliers || 0)],
+      ['Total Realized Spend (Received)', `Rs. ${this.sanitize(data.summary?.totalSpend || '0.00')}`],
+      ['Total Draft Orders Value', `Rs. ${this.sanitize(data.summary?.totalDraftSpend || '0.00')}`],
+      ['Total Reversed Orders Value', `Rs. ${this.sanitize(data.summary?.totalReversedSpend || '0.00')}`]
+    ];
+    this.renderCustomTable(['Metric', 'Value'], [260, 255], summaryRows);
+
+    if (Array.isArray(data.suppliers) && data.suppliers.length > 0) {
+      this.renderSectionTitle('Supplier Order Breakdown');
+      const rows = data.suppliers.map((s: any) => [
+        this.sanitize(s.supplierName),
+        this.sanitize(s.phone || s.contactPerson || '-'),
+        this.sanitize(s.receivedOrders),
+        `Rs. ${this.sanitize(s.receivedTotal)}`,
+        this.sanitize(s.lastPurchaseDate || '-')
+      ]);
+      this.renderCustomTable(
+        ['Supplier Name', 'Contact / Phone', 'Received Orders', 'Total Realized Spend', 'Last Order Date'],
+        [160, 115, 75, 95, 70],
+        rows
+      );
+    }
+  }
+
+  private renderWastageReport(data: any) {
+    this.renderSectionTitle('Wastage & Operational Shrinkage Summary');
+
+    const summaryRows = [
+      ['Total Wastage Incidents', this.sanitize(data.summary?.totalWastageRecords || 0)],
+      ['Total Wasted Quantity (Units)', this.sanitize(data.summary?.totalWastedQuantity || '0.000')],
+      ['Recorded Financial Loss', `Rs. ${this.sanitize(data.summary?.totalRecordedFinancialLoss || '0.00')}`],
+      ['Uncosted Incidents Count', this.sanitize(data.summary?.uncostedMovementsCount || 0)]
+    ];
+    this.renderCustomTable(['Wastage Metric', 'Recorded Value'], [260, 255], summaryRows);
+
+    if (Array.isArray(data.wastageItems) && data.wastageItems.length > 0) {
+      this.renderSectionTitle('Wastage Incident Log');
+      const rows = data.wastageItems.map((w: any) => [
+        this.sanitize(w.businessDate),
+        this.sanitize(w.itemName),
+        this.sanitize(w.movementType),
+        `${this.sanitize(w.quantityWasted)} ${this.sanitize(w.baseUnit)}`,
+        w.recordedLossAmount ? `Rs. ${this.sanitize(w.recordedLossAmount)}` : 'Uncosted',
+        this.sanitize(w.reason || '-')
+      ]);
+      this.renderCustomTable(
+        ['Date', 'Item Name', 'Type', 'Quantity', 'Loss (Recorded)', 'Reason / Notes'],
+        [65, 120, 95, 75, 75, 85],
+        rows
+      );
+    }
+  }
+
+  private renderPhase2Profitability(data: any) {
+    this.renderSectionTitle('Phase 2 Estimated Profitability & Performance Summary');
+
+    const fin = data.financialSummary || {};
+    const summaryRows = [
+      ['Gross Sales Revenue', `Rs. ${this.sanitize(fin.totalRevenue || '0.00')}`],
+      ['Total Operating Expenses', `Rs. ${this.sanitize(fin.totalOperatingExpenses || '0.00')}`],
+      ['Total Received Purchases (Inventory Spend)', `Rs. ${this.sanitize(fin.totalReceivedPurchases || '0.00')}`],
+      ['Phase 1 Net Profit (Sales - Expenses)', `Rs. ${this.sanitize(fin.phase1NetProfit || '0.00')}`],
+      ['Phase 2 Estimated Net Profit', `Rs. ${this.sanitize(fin.phase2EstimatedNetProfit || '0.00')}`]
+    ];
+    this.renderCustomTable(['Financial Metric', 'Amount'], [260, 255], summaryRows);
+
+    // Disclaimer alert box
+    this.ensureSpace(45);
+    this.currentPage.drawRectangle({
+      x: this.margin,
+      y: this.yOffset - 35,
+      width: this.contentWidth,
+      height: 35,
+      color: this.colorForestLight,
+      borderColor: this.colorBorder,
+      borderWidth: 0.5
+    });
+    this.currentPage.drawText('* Disclaimer: Phase 2 profitability reflects cash/accrued inventory purchases during', {
+      x: this.margin + 8,
+      y: this.yOffset - 14,
+      size: 8,
+      font: this.fontRegular,
+      color: this.colorDark
+    });
+    this.currentPage.drawText('this period and is not a recipe-costed COGS (scheduled for Phase 3).', {
+      x: this.margin + 8,
+      y: this.yOffset - 25,
+      size: 8,
+      font: this.fontRegular,
+      color: this.colorDark
+    });
+    this.yOffset -= 45;
+
+    // Inventory purchase breakdown
+    this.renderSectionTitle('Inventory Purchase Category Breakdown');
+    const purch = data.purchases || {};
+    const purchRows = [
+      ['Raw Materials Purchase Total', `Rs. ${this.sanitize(purch.rawMaterialPurchases || '0.00')}`],
+      ['Packaging Materials Purchase Total', `Rs. ${this.sanitize(purch.packagingPurchases || '0.00')}`],
+      ['Other Inventory Categories Total', `Rs. ${this.sanitize(purch.otherPurchases || '0.00')}`],
+      ['Total Received Inventory Purchases', `Rs. ${this.sanitize(purch.totalPurchases || '0.00')}`]
+    ];
+    this.renderCustomTable(['Purchase Category', 'Total Spend'], [260, 255], purchRows);
+
+    // Wastage & Shrinkage Indicators
+    this.renderSectionTitle('Inventory Shrinkage & Consumption Indicators');
+    const waste = data.wastageIndicators || {};
+    const cons = data.manualConsumptionIndicators || {};
+    const indRows = [
+      ['Wastage Incidents Count', this.sanitize(waste.wastageMovementCount || 0)],
+      ['Wastage Quantity Total', this.sanitize(waste.wastageTotalQuantity || '0.000')],
+      ['Manual Decrease Incidents', this.sanitize(waste.manualDecreaseCount || 0)],
+      ['Physical Count Deficit Corrections', this.sanitize(waste.countCorrectionDeficitCount || 0)],
+      ['Manual Staff / Kitchen Consumption', this.sanitize(cons.manualConsumptionCount || 0)]
+    ];
+    this.renderCustomTable(['Shrinkage Indicator', 'Count / Total Quantity'], [260, 255], indRows);
+  }
+
+  // --- PHASE 1 RENDERERS (PRESERVED) ---
 
   private renderDailySummary(data: any) {
-    // 1. KPI Cards Row
     this.renderSectionTitle('Key Performance Indicators');
 
     const kpis = [
@@ -199,7 +441,6 @@ export class PdfGenerator {
       const x = this.margin + idx * (cardWidth + 10);
       const y = this.yOffset - cardHeight;
 
-      // Card background
       this.currentPage.drawRectangle({
         x,
         y,
@@ -210,7 +451,6 @@ export class PdfGenerator {
         borderWidth: 0.5
       });
 
-      // Label
       this.currentPage.drawText(kpi.label, {
         x: x + 8,
         y: y + cardHeight - 14,
@@ -219,7 +459,6 @@ export class PdfGenerator {
         color: this.colorMuted
       });
 
-      // Value
       this.currentPage.drawText(kpi.value, {
         x: x + 8,
         y: y + 10,
@@ -231,7 +470,6 @@ export class PdfGenerator {
 
     this.yOffset -= (cardHeight + 20);
 
-    // 2. Financial Breakdown & Payment Methods
     this.renderSectionTitle('Sales & Payment Channel Summary');
 
     const summaryRows = [
@@ -247,7 +485,6 @@ export class PdfGenerator {
       summaryRows
     );
 
-    // 3. Category Breakdown Table
     if (Array.isArray(data.categoryBreakdown) && data.categoryBreakdown.length > 0) {
       this.renderSectionTitle('Category Performance Breakdown');
       const catRows = data.categoryBreakdown.map((c: any) => [
@@ -256,22 +493,6 @@ export class PdfGenerator {
         `Rs. ${this.sanitize(c.total_revenue || '0.00')}`
       ]);
       this.renderCustomTable(['Category Name', 'Units Sold', 'Total Revenue'], [235, 120, 160], catRows);
-    }
-
-    // 4. Item Sales Table (if any)
-    if (Array.isArray(data.itemBreakdown) && data.itemBreakdown.length > 0) {
-      this.renderSectionTitle('Top Sold Menu Items');
-      const itemRows = data.itemBreakdown.slice(0, 15).map((it: any) => [
-        this.sanitize(it.item_name || 'Item'),
-        this.sanitize(it.category_name || '-'),
-        this.sanitize(it.total_quantity || 0),
-        `Rs. ${this.sanitize(it.total_revenue || '0.00')}`
-      ]);
-      this.renderCustomTable(
-        ['Item Name', 'Category', 'Quantity Sold', 'Total Revenue'],
-        [185, 130, 90, 110],
-        itemRows
-      );
     }
   }
 
@@ -289,16 +510,6 @@ export class PdfGenerator {
         [185, 130, 90, 110],
         rows
       );
-    }
-
-    if (Array.isArray(data.categoryBreakdown) && data.categoryBreakdown.length > 0) {
-      this.renderSectionTitle('Category Sales Breakdown');
-      const catRows = data.categoryBreakdown.map((c: any) => [
-        this.sanitize(c.category_name || 'Uncategorized'),
-        this.sanitize(c.total_quantity || 0),
-        `Rs. ${this.sanitize(c.total_revenue || '0.00')}`
-      ]);
-      this.renderCustomTable(['Category Name', 'Units Sold', 'Total Revenue'], [235, 120, 160], catRows);
     }
   }
 
@@ -324,7 +535,6 @@ export class PdfGenerator {
       rows
     );
 
-    // Total expense footer note
     this.ensureSpace(25);
     this.currentPage.drawText(`Total Expenses: Rs. ${totalExpenseAmount.toFixed(2)}`, {
       x: this.pageWidth - this.margin - 200,
@@ -344,6 +554,7 @@ export class PdfGenerator {
       ['Opening Cash Float', `Rs. ${this.sanitize(data.openingCash || '0.00')}`],
       ['Cash Sales Recorded', `Rs. ${this.sanitize(data.cashSales || '0.00')}`],
       ['Cash Expenses Paid', `Rs. ${this.sanitize(data.cashExpenses || '0.00')}`],
+      ['Cash Purchases Paid', `Rs. ${this.sanitize(data.cashPurchases || '0.00')}`],
       ['Expected Closing Cash', `Rs. ${this.sanitize(data.expectedClosingCash || '0.00')}`],
       ['Actual Physical Cash Counted', `Rs. ${this.sanitize(data.actualCash || '0.00')}`],
       ['Cash Variance / Difference', `Rs. ${this.sanitize(data.cashDifference || '0.00')}`],
@@ -364,7 +575,7 @@ export class PdfGenerator {
   private renderGenericTable(data: any[]) {
     if (data.length === 0) {
       this.ensureSpace(30);
-      this.currentPage.drawText('No records found for the selected date range.', {
+      this.currentPage.drawText('No records found for the selected criteria.', {
         x: this.margin,
         y: this.yOffset,
         size: 11,
@@ -426,7 +637,6 @@ export class PdfGenerator {
 
     this.ensureSpace(headerHeight + rowHeight + 10);
 
-    // Draw Table Header
     let currentX = this.margin;
     this.currentPage.drawRectangle({
       x: this.margin,
@@ -449,7 +659,6 @@ export class PdfGenerator {
 
     this.yOffset -= headerHeight;
 
-    // Draw Data Rows
     rows.forEach((row, rowIdx) => {
       this.ensureSpace(rowHeight);
 
@@ -464,7 +673,6 @@ export class PdfGenerator {
         });
       }
 
-      // Bottom row divider line
       this.currentPage.drawLine({
         start: { x: this.margin, y: this.yOffset - rowHeight },
         end: { x: this.pageWidth - this.margin, y: this.yOffset - rowHeight },
@@ -475,7 +683,6 @@ export class PdfGenerator {
       let cellX = this.margin;
       row.forEach((cell, colIdx) => {
         const text = this.sanitize(cell);
-        // Truncate if too long to prevent overlapping
         const maxLen = Math.floor(colWidths[colIdx] / 5.5);
         const display = text.length > maxLen ? text.slice(0, maxLen - 2) + '..' : text;
 
@@ -492,7 +699,7 @@ export class PdfGenerator {
       this.yOffset -= rowHeight;
     });
 
-    this.yOffset -= 15; // spacing after table
+    this.yOffset -= 15;
   }
 
   private renderFooters(metadata: ReportPdfMetadata) {

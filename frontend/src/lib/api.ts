@@ -10,7 +10,10 @@ import {
   StockMovementDTO, ItemStockSummaryDTO, StockCountDTO, StockMovementListParams,
   StockMovementListResultDTO, RecordOpeningStockPayload, RecordAdjustmentPayload,
   RecordStockCountPayload, RecordOpeningStockResultDTO, RecordAdjustmentResultDTO,
-  RecordStockCountResultDTO
+  RecordStockCountResultDTO, InventoryOverviewDTO, LowStockItemDTO, LowStockListResultDTO,
+  AcknowledgeAlertPayload, Phase2ProfitabilityDTO, InventoryStockReportParams,
+  StockMovementsReportParams, PurchasesReportParams, SupplierSummaryReportParams,
+  WastageReportParams, Phase2ProfitabilityReportParams
 } from './types';
 
 export class ApiError extends Error {
@@ -345,7 +348,84 @@ export const api = {
     request<RecordStockCountResultDTO>('/api/stock/counts', {
       method: 'POST',
       body: JSON.stringify(payload)
-    }, idempotencyKey)
+    }, idempotencyKey),
+
+  // Module 5: Inventory Alerts, Reports & Financial Integration
+  getInventoryOverview: () =>
+    request<InventoryOverviewDTO>('/api/inventory/overview', { cache: 'no-store' }),
+
+  listLowStock: (params?: { page?: number | string; pageSize?: number | string }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+    const queryStr = query.toString();
+    return request<LowStockListResultDTO>(`/api/inventory/low-stock${queryStr ? `?${queryStr}` : ''}`, { cache: 'no-store' });
+  },
+
+  acknowledgeLowStockAlert: (itemId: string, note?: string) =>
+    request<{ acknowledgement: any }>(`/api/inventory/low-stock/${itemId}/acknowledge`, {
+      method: 'POST',
+      body: JSON.stringify({ note: note?.trim() || undefined })
+    }),
+
+  getInventoryStockReport: (params?: InventoryStockReportParams) => {
+    const query = new URLSearchParams();
+    if (params?.asOf) query.set('asOf', params.asOf);
+    if (params?.format) query.set('format', params.format);
+    const queryStr = query.toString();
+    return request<ExportResultDTO>(`/api/reports/inventory-stock${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  getStockMovementsReport: (params: StockMovementsReportParams) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set('from', params.from);
+    if (params.to) query.set('to', params.to);
+    if (params.itemId) query.set('itemId', params.itemId);
+    if (params.movementType) query.set('movementType', params.movementType);
+    if (params.format) query.set('format', params.format);
+    const queryStr = query.toString();
+    return request<ExportResultDTO>(`/api/reports/stock-movements${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  getPurchasesReport: (params: PurchasesReportParams) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set('from', params.from);
+    if (params.to) query.set('to', params.to);
+    if (params.supplierId) query.set('supplierId', params.supplierId);
+    if (params.itemId) query.set('itemId', params.itemId);
+    if (params.paymentMethod) query.set('paymentMethod', params.paymentMethod);
+    if (params.status) query.set('status', params.status);
+    if (params.format) query.set('format', params.format);
+    const queryStr = query.toString();
+    return request<ExportResultDTO>(`/api/reports/purchases${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  getSuppliersReport: (params: SupplierSummaryReportParams) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set('from', params.from);
+    if (params.to) query.set('to', params.to);
+    if (params.format) query.set('format', params.format);
+    const queryStr = query.toString();
+    return request<ExportResultDTO>(`/api/reports/suppliers${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  getWastageReport: (params: WastageReportParams) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set('from', params.from);
+    if (params.to) query.set('to', params.to);
+    if (params.format) query.set('format', params.format);
+    const queryStr = query.toString();
+    return request<ExportResultDTO>(`/api/reports/wastage${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  getPhase2Profitability: (params: Phase2ProfitabilityReportParams) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set('from', params.from);
+    if (params.to) query.set('to', params.to);
+    if (params.format) query.set('format', params.format);
+    const queryStr = query.toString();
+    return request<ExportResultDTO | { profitability: Phase2ProfitabilityDTO }>(`/api/profitability/phase-2${queryStr ? `?${queryStr}` : ''}`);
+  }
 };
 
 export function downloadExportFile(exportData: ExportResultDTO, filename: string) {

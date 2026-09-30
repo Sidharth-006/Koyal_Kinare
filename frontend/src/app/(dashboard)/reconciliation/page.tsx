@@ -9,7 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { Lock, Unlock, Key, Wallet, CreditCard, DollarSign, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { Lock, Unlock, Key, Wallet, CreditCard, DollarSign, CheckCircle2, ShoppingCart } from 'lucide-react';
 
 export default function ReconciliationPage() {
   const { showToast } = useToast();
@@ -143,12 +144,18 @@ export default function ReconciliationPage() {
     }
   };
 
-  // Realtime Variance Calculation
+  // Realtime Variance Calculation (Read-Only Authoritative Values)
   const openingVal = reconData?.opening?.opening_cash ?? reconData?.opening?.openingCash ?? reconData?.openingCash ?? 0;
   const cashSalesVal = reconData?.totalCashSales ?? reconData?.total_cash_sales ?? reconData?.cashSales ?? 0;
   const cashExpVal = reconData?.totalCashExpenses ?? reconData?.total_cash_expenses ?? reconData?.cashExpenses ?? 0;
+  const cashPurchasesVal = reconData?.cashPurchaseTotal ?? reconData?.cashPurchases ?? reconData?.totalCashPurchases ?? reconData?.total_cash_purchases ?? 0;
 
-  const expectedCash = Number(reconData?.expectedCash ?? reconData?.expected_closing_cash ?? reconData?.expectedClosingCash ?? (Number(openingVal) + Number(cashSalesVal) - Number(cashExpVal)));
+  const expectedCash = Number(
+    reconData?.expectedCash ??
+    reconData?.expected_closing_cash ??
+    reconData?.expectedClosingCash ??
+    (Number(openingVal) + Number(cashSalesVal) - Number(cashExpVal) - Number(cashPurchasesVal))
+  );
   const actualCashNum = parseFloat(actualCashInput) || 0;
   const variance = actualCashNum - expectedCash;
 
@@ -233,38 +240,64 @@ export default function ReconciliationPage() {
             )}
           </Card>
 
-          {/* Cash Drawer Breakdown Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card hoverable className="border-border">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Opening Float</p>
-              <p className="text-xl font-extrabold text-forest-800 mt-1">
-                {formatINR(openingVal)}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1 font-medium">Recorded at day start</p>
+          {/* Cash Drawer Breakdown Grid (Read-Only Authoritative Display) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            <Card hoverable className="border-border bg-white flex flex-col justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Opening Float</p>
+                <p className="text-xl font-extrabold text-forest-800 mt-1">
+                  {formatINR(openingVal)}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 font-medium">Recorded at day start</p>
             </Card>
 
-            <Card hoverable className="border-border">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Cash Sales (+)</p>
-              <p className="text-xl font-extrabold text-emerald-700 mt-1">
-                +{formatINR(cashSalesVal)}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1 font-medium">From completed cash bills</p>
+            <Card hoverable className="border-border bg-white flex flex-col justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Cash Sales (+)</p>
+                <p className="text-xl font-extrabold text-emerald-700 mt-1">
+                  +{formatINR(cashSalesVal)}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 font-medium">From completed cash bills</p>
             </Card>
 
-            <Card hoverable className="border-border">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Cash Expenses (-)</p>
-              <p className="text-xl font-extrabold text-rose-600 mt-1">
-                -{formatINR(cashExpVal)}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1 font-medium">Paid out from register</p>
+            <Card hoverable className="border-border bg-white flex flex-col justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Cash Expenses (-)</p>
+                <p className="text-xl font-extrabold text-rose-600 mt-1">
+                  -{formatINR(cashExpVal)}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 font-medium">Paid out from register</p>
             </Card>
 
-            <Card hoverable className="border-forest-800/30 bg-gradient-to-br from-white via-white to-forest-100/40">
-              <p className="text-xs text-forest-800 font-bold uppercase tracking-wider">Expected Register Cash</p>
-              <p className="text-xl font-extrabold text-forest-800 mt-1">
-                {formatINR(expectedCash)}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1 font-medium">Float + Sales - Expenses</p>
+            <Card hoverable className="border-amber-200 bg-amber-50/40 flex flex-col justify-between">
+              <div>
+                <p className="text-xs text-amber-900 font-bold uppercase tracking-wider">Cash Purchases (-)</p>
+                <p className="text-xl font-extrabold text-amber-800 mt-1">
+                  -{formatINR(cashPurchasesVal)}
+                </p>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[11px]">
+                <span className="text-amber-700 font-medium">Supplier cash orders</span>
+                <Link
+                  href={`/purchases?startDate=${businessDate}&endDate=${businessDate}&paymentMethod=CASH&status=RECEIVED`}
+                  className="font-bold text-amber-900 hover:underline"
+                >
+                  View
+                </Link>
+              </div>
+            </Card>
+
+            <Card hoverable className="border-forest-800/30 bg-gradient-to-br from-white via-white to-forest-100/40 flex flex-col justify-between sm:col-span-2 lg:col-span-1">
+              <div>
+                <p className="text-xs text-forest-800 font-bold uppercase tracking-wider">Expected Register Cash</p>
+                <p className="text-xl font-extrabold text-forest-800 mt-1">
+                  {formatINR(expectedCash)}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2 font-medium">Float + Sales - Exp - Purchases</p>
             </Card>
           </div>
 
@@ -391,7 +424,7 @@ export default function ReconciliationPage() {
                 <div>
                   <p className="text-xs text-slate-700 font-bold uppercase tracking-wider">Calculated Cash Variance</p>
                   <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                    Actual Cash ({formatINR(actualCashNum)}) - Expected Cash ({formatINR(expectedCash)})
+                    Actual Cash ({formatINR(actualCashNum)}) − Expected Cash ({formatINR(expectedCash)}) [Float + Sales − Expenses − Purchases]
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
