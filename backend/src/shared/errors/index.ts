@@ -143,5 +143,29 @@ export class ExportFailedError extends AppError {
   }
 }
 
+export class StaffArchivedError extends AppError {
+  constructor(message: string = 'Cannot record attendance for an archived staff member.') {
+    super(message, 'STAFF_ARCHIVED', 400);
+  }
+}
+
+export class AttendanceTimeInvalidError extends AppError {
+  constructor(message: string = 'Invalid check-in or check-out timestamp.') {
+    super(message, 'ATTENDANCE_TIME_INVALID', 400);
+  }
+}
+
+export class AttendanceConflictError extends AppError {
+  constructor(message: string = 'Attendance record was updated by another session. Please refresh.') {
+    super(message, 'ATTENDANCE_CONFLICT', 409);
+  }
+}
+
+export class InvalidAttendanceStatusError extends AppError {
+  constructor(message: string = 'Invalid attendance status provided.') {
+    super(message, 'INVALID_ATTENDANCE_STATUS', 400);
+  }
+}
+
 
 

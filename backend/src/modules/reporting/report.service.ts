@@ -7,6 +7,8 @@ import { InventoryReportsService } from './inventory-reports.service';
 import { ProfitabilityService } from './profitability.service';
 import { AuditService } from '../audit/audit.service';
 import { PdfGenerator } from './pdf.generator';
+import { AttendanceService } from '../attendance/attendance.service';
+import { AttendanceRepository } from '../attendance/attendance.repository';
 import { ValidationError } from '@/shared/errors';
 
 export class ReportService {
@@ -17,6 +19,7 @@ export class ReportService {
     asOf?: string;
     itemId?: string;
     supplierId?: string;
+    staffId?: string;
     paymentMethod?: string;
     status?: string;
     movementType?: string;
@@ -78,6 +81,25 @@ export class ReportService {
       case 'PROFITABILITY_PHASE_2':
       case 'PHASE_2_PROFITABILITY':
         return ProfitabilityService.getPhase2Profitability(params.startDate, params.endDate);
+      case 'ATTENDANCE':
+      case 'ATTENDANCE_REPORT': {
+        const summary = await AttendanceService.getAttendanceSummary(params.startDate, params.endDate, params.staffId);
+        const records = await AttendanceRepository.getAttendanceByDateRange(params.startDate, params.endDate, params.staffId);
+        return {
+          reportType: 'ATTENDANCE',
+          summary: summary.metrics,
+          staffSummaries: summary.staffSummaries,
+          items: records.map(r => ({
+            date: r.business_date,
+            staffName: r.staff_name,
+            roleTitle: r.staff_role_title,
+            status: r.status,
+            checkIn: r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+            checkOut: r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+            note: r.note || '-'
+          }))
+        };
+      }
       default:
         return SalesService.getSalesMetrics(params.startDate, params.endDate);
     }
@@ -91,6 +113,7 @@ export class ReportService {
       asOf?: string;
       itemId?: string;
       supplierId?: string;
+      staffId?: string;
       paymentMethod?: string;
       status?: string;
       movementType?: string;
@@ -114,9 +137,10 @@ export class ReportService {
       requestedBy: adminId
     });
 
+    const auditAction = params.reportType?.toUpperCase() === 'ATTENDANCE' ? 'ATTENDANCE_EXPORTED' : 'REPORT_EXPORTED';
     await AuditService.logEvent({
       adminId,
-      action: 'REPORT_EXPORTED',
+      action: auditAction,
       entityType: 'EXPORT_JOB',
       entityId: job.id,
       requestId,

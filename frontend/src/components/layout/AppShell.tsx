@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Receipt, SlidersHorizontal,
-  BarChart3, FileText, Settings, LogOut, Coffee, Calendar, User, Menu as MenuIcon, X, Sparkles, Package, Truck, ShoppingCart, History
+  BarChart3, FileText, Settings, LogOut, Coffee, Calendar, User, Menu as MenuIcon, X, Sparkles, Package, Truck, ShoppingCart, History,
+  Users, UserCheck
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api } from '@/lib/api';
@@ -48,6 +49,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
     { href: '/suppliers', label: 'Suppliers', icon: Truck },
     { href: '/purchases', label: 'Purchases', icon: ShoppingCart },
     { href: '/expenses', label: 'Expenses', icon: Receipt },
+    { href: '/staff', label: 'Staff', icon: Users },
+    { href: '/attendance', label: 'Attendance', icon: UserCheck },
     { href: '/reconciliation', label: 'Daily Closing', icon: SlidersHorizontal },
     { href: '/sales', label: 'Sales', icon: BarChart3 },
     { href: '/reports', label: 'Reports', icon: FileText },

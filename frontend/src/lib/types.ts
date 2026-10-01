@@ -827,5 +827,176 @@ export interface Phase2ProfitabilityReportParams {
   format?: 'XLSX' | 'PDF';
 }
 
+// ==========================================
+// Phase 3, Module 1: Staff & Attendance Types
+// ==========================================
 
+export interface StaffDTO {
+  id: string;
+  full_name: string;
+  fullName?: string;
+  phone: string | null;
+  role_title: string;
+  roleTitle?: string;
+  joining_date: string;
+  joiningDate?: string;
+  emergency_contact: string | null;
+  emergencyContact?: string | null;
+  salary_reference?: string | null;
+  salaryReference?: string | null;
+  notes: string | null;
+  is_archived: boolean;
+  isArchived?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
 
+export interface CreateStaffPayload {
+  fullName: string;
+  phone?: string | null;
+  roleTitle: string;
+  joiningDate: string;
+  emergencyContact?: string | null;
+  salaryReference?: number | string | null;
+  notes?: string | null;
+}
+
+export interface UpdateStaffPayload {
+  fullName?: string;
+  phone?: string | null;
+  roleTitle?: string;
+  joiningDate?: string;
+  emergencyContact?: string | null;
+  salaryReference?: number | string | null;
+  notes?: string | null;
+}
+
+export interface StaffListParams {
+  search?: string;
+  roleTitle?: string;
+  archived?: 'active' | 'archived' | 'all' | boolean | string;
+}
+
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'HALF_DAY' | 'LEAVE' | 'OFF_DAY';
+
+export interface AttendanceRecordDTO {
+  id: string;
+  staff_id: string;
+  staffId?: string;
+  staff_name?: string;
+  staffName?: string;
+  staff_role_title?: string;
+  staffRoleTitle?: string;
+  business_date: string;
+  businessDate?: string;
+  status: AttendanceStatus;
+  check_in_at: string | null;
+  checkInAt?: string | null;
+  check_out_at: string | null;
+  checkOutAt?: string | null;
+  note: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DailyAttendanceRosterItemDTO {
+  staffId: string;
+  staffName: string;
+  roleTitle: string;
+  isArchived: boolean;
+  joiningDate: string;
+  attendanceId: string | null;
+  businessDate: string;
+  status: AttendanceStatus | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  note: string | null;
+  updatedAt: string | null;
+}
+
+export interface SaveAttendancePayload {
+  status: AttendanceStatus;
+  checkInAt?: string | null;
+  checkOutAt?: string | null;
+  note?: string | null;
+  expectedUpdatedAt?: string | null; // For single record optimistic concurrency
+}
+
+export interface BulkAttendanceEntryInput {
+  staffId: string;
+  status: AttendanceStatus;
+  checkInAt?: string | null;
+  checkOutAt?: string | null;
+  note?: string | null;
+}
+
+export interface BulkSaveAttendancePayload {
+  entries: BulkAttendanceEntryInput[];
+}
+
+export interface BulkSaveAttendanceResultDTO {
+  businessDate: string;
+  totalSaved: number;
+  records: AttendanceRecordDTO[];
+}
+
+export interface AttendanceSummaryMetricsDTO {
+  totalRecordedDays: number;
+  totalRecordedEntries: number;
+  presentCount: number;
+  halfDayCount: number;
+  absentCount: number;
+  leaveCount: number;
+  offDayCount: number;
+  effectivePresentDays: number;
+  workingDaysDenominator: number;
+  attendanceRate: number;
+  formulaDescription: string;
+}
+
+export interface StaffAttendanceSummaryDTO {
+  staffId: string;
+  staffName: string;
+  roleTitle: string;
+  isArchived: boolean;
+  totalEntries: number;
+  presentCount: number;
+  halfDayCount: number;
+  absentCount: number;
+  leaveCount: number;
+  offDayCount: number;
+  effectivePresentDays: number;
+  workingDaysDenominator: number;
+  attendanceRate: number;
+}
+
+export interface DailyAttendanceTrendDTO {
+  date: string;
+  totalEntries: number;
+  presentCount: number;
+  halfDayCount: number;
+  absentCount: number;
+  leaveCount: number;
+  offDayCount: number;
+}
+
+export interface AttendanceSummaryResponseDTO {
+  dateRange: {
+    from: string;
+    to: string;
+  };
+  metrics: AttendanceSummaryMetricsDTO;
+  staffSummaries: StaffAttendanceSummaryDTO[];
+  dailyTrends: DailyAttendanceTrendDTO[];
+}
+
+export interface AttendanceReportParams {
+  from?: string;
+  to?: string;
+  staffId?: string;
+  format?: 'XLSX' | 'PDF';
+}

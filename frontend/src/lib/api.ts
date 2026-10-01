@@ -13,7 +13,11 @@ import {
   RecordStockCountResultDTO, InventoryOverviewDTO, LowStockItemDTO, LowStockListResultDTO,
   AcknowledgeAlertPayload, Phase2ProfitabilityDTO, InventoryStockReportParams,
   StockMovementsReportParams, PurchasesReportParams, SupplierSummaryReportParams,
-  WastageReportParams, Phase2ProfitabilityReportParams
+  WastageReportParams, Phase2ProfitabilityReportParams,
+  StaffDTO, CreateStaffPayload, UpdateStaffPayload, StaffListParams,
+  AttendanceStatus, AttendanceRecordDTO, DailyAttendanceRosterItemDTO,
+  SaveAttendancePayload, BulkSaveAttendancePayload, BulkSaveAttendanceResultDTO,
+  AttendanceSummaryResponseDTO, AttendanceReportParams
 } from './types';
 
 export class ApiError extends Error {
@@ -71,7 +75,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     INSUFFICIENT_STOCK: 'This change would make stock negative. Review the current quantity.',
     DUPLICATE_OPENING_STOCK: 'Opening stock has already been recorded for this item on the selected date.',
     DUPLICATE_MOVEMENT: 'A stock movement for this source reference has already been recorded.',
-    IDEMPOTENCY_KEY_REUSED: 'This request was already submitted. Please refresh and check current state.'
+    IDEMPOTENCY_KEY_REUSED: 'This request was already submitted. Please refresh and check current state.',
+    STAFF_ARCHIVED: 'Cannot record attendance for a staff member who was archived before this date.',
+    ATTENDANCE_TIME_INVALID: 'Check-in and check-out times must be valid and check-out must be after check-in.',
+    ATTENDANCE_CONFLICT: 'Attendance record was updated on another device. Please refresh.',
+    INVALID_ATTENDANCE_STATUS: 'Please provide a valid attendance status.',
+    REPORT_TOO_LARGE: 'Attendance report date range cannot exceed 366 days.'
   };
 
   if (!response.ok) {
@@ -425,6 +434,57 @@ export const api = {
     if (params.format) query.set('format', params.format);
     const queryStr = query.toString();
     return request<ExportResultDTO | { profitability: Phase2ProfitabilityDTO }>(`/api/profitability/phase-2${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  // Staff
+  listStaff: (params?: StaffListParams) => {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.roleTitle) query.set('roleTitle', params.roleTitle);
+    if (params?.archived !== undefined) query.set('archived', String(params.archived));
+    const queryStr = query.toString();
+    return request<{ staff: StaffDTO[] }>(`/api/staff${queryStr ? `?${queryStr}` : ''}`);
+  },
+  getStaff: (id: string) =>
+    request<{ staff: StaffDTO }>(`/api/staff/${encodeURIComponent(id)}`),
+  createStaff: (payload: CreateStaffPayload, idempotencyKey?: string) =>
+    request<{ staff: StaffDTO }>('/api/staff', { method: 'POST', body: JSON.stringify(payload) }, idempotencyKey),
+  updateStaff: (id: string, payload: UpdateStaffPayload) =>
+    request<{ staff: StaffDTO }>(`/api/staff/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  archiveStaff: (id: string, idempotencyKey?: string) =>
+    request<{ staff: StaffDTO }>(`/api/staff/${encodeURIComponent(id)}/archive`, { method: 'POST' }, idempotencyKey),
+  restoreStaff: (id: string, idempotencyKey?: string) =>
+    request<{ staff: StaffDTO }>(`/api/staff/${encodeURIComponent(id)}/restore`, { method: 'POST' }, idempotencyKey),
+
+  // Attendance
+  getDailyAttendance: (date: string) =>
+    request<{ date: string; roster: DailyAttendanceRosterItemDTO[] }>(`/api/attendance?date=${encodeURIComponent(date)}`),
+  saveSingleAttendance: (staffId: string, date: string, payload: SaveAttendancePayload) =>
+    request<{ record: AttendanceRecordDTO }>(`/api/attendance/${encodeURIComponent(staffId)}?date=${encodeURIComponent(date)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }),
+  bulkSaveAttendance: (date: string, payload: BulkSaveAttendancePayload, idempotencyKey?: string) =>
+    request<BulkSaveAttendanceResultDTO>(`/api/attendance/bulk?date=${encodeURIComponent(date)}`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, idempotencyKey),
+  getAttendanceSummary: (from: string, to: string, staffId?: string) => {
+    const query = new URLSearchParams();
+    if (from) query.set('from', from);
+    if (to) query.set('to', to);
+    if (staffId) query.set('staffId', staffId);
+    const queryStr = query.toString();
+    return request<AttendanceSummaryResponseDTO>(`/api/attendance/summary${queryStr ? `?${queryStr}` : ''}`);
+  },
+  getAttendanceReport: (params: AttendanceReportParams) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set('from', params.from);
+    if (params.to) query.set('to', params.to);
+    if (params.staffId) query.set('staffId', params.staffId);
+    if (params.format) query.set('format', params.format);
+    const queryStr = query.toString();
+    return request<ExportResultDTO>(`/api/reports/attendance${queryStr ? `?${queryStr}` : ''}`);
   }
 };
 

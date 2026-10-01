@@ -43,8 +43,9 @@ export class PdfGenerator {
     this.addNewPage();
     this.renderHeader(metadata);
 
-    // Determine type of data and render appropriately
-    if (this.isInventoryStock(data)) {
+    if (this.isAttendanceReport(data)) {
+      this.renderAttendanceReport(data);
+    } else if (this.isInventoryStock(data)) {
       this.renderInventoryStock(data);
     } else if (this.isStockMovements(data)) {
       this.renderStockMovements(data);
@@ -169,6 +170,14 @@ export class PdfGenerator {
 
   // --- TYPE GUARDS ---
 
+  private isAttendanceReport(data: any): boolean {
+    return Boolean(
+      data &&
+      (data.reportType === 'ATTENDANCE' ||
+        (data.summary && ('effectivePresentDays' in data.summary || 'totalRecordedDays' in data.summary)))
+    );
+  }
+
   private isInventoryStock(data: any): boolean {
     return data && (data.reportType === 'INVENTORY_STOCK' || (Array.isArray(data.items) && data.summary && 'totalValuation' in data.summary));
   }
@@ -207,6 +216,73 @@ export class PdfGenerator {
 
   private isReconciliation(data: any): boolean {
     return data && typeof data === 'object' && ('openingCash' in data || 'expectedClosingCash' in data || 'actualCash' in data);
+  }
+
+  // --- ATTENDANCE RENDERER ---
+
+  private renderAttendanceReport(data: any) {
+    const summary = data.summary || {};
+    const kpis = [
+      { label: 'Total Recorded Days', value: this.sanitize(summary.totalRecordedDays || 0) },
+      { label: 'Present / Half-Day', value: `${this.sanitize(summary.presentCount || 0)} / ${this.sanitize(summary.halfDayCount || 0)}` },
+      { label: 'Absent / Leave / Off', value: `${this.sanitize(summary.absentCount || 0)} / ${this.sanitize(summary.leaveCount || 0)} / ${this.sanitize(summary.offDayCount || 0)}` },
+      { label: 'Attendance Rate', value: `${this.sanitize(summary.attendanceRate || 0)}%` }
+    ];
+
+    const cardWidth = (this.contentWidth - 30) / 4;
+    const cardHeight = 44;
+    this.ensureSpace(cardHeight + 20);
+
+    kpis.forEach((kpi, idx) => {
+      const x = this.margin + idx * (cardWidth + 10);
+      const y = this.yOffset - cardHeight;
+
+      this.currentPage.drawRectangle({
+        x,
+        y,
+        width: cardWidth,
+        height: cardHeight,
+        color: this.colorForestLight,
+        borderColor: this.colorBorder,
+        borderWidth: 0.5
+      });
+
+      this.currentPage.drawText(kpi.label, {
+        x: x + 8,
+        y: y + cardHeight - 14,
+        size: 7.5,
+        font: this.fontRegular,
+        color: this.colorMuted
+      });
+
+      this.currentPage.drawText(kpi.value, {
+        x: x + 8,
+        y: y + 10,
+        size: 11,
+        font: this.fontBold,
+        color: this.colorForest
+      });
+    });
+
+    this.yOffset -= (cardHeight + 20);
+
+    this.renderSectionTitle('Daily Attendance Register');
+
+    const headers = ['Date', 'Staff Name', 'Role', 'Status', 'Check In', 'Check Out', 'Note'];
+    const colWidths = [65, 110, 85, 65, 55, 55, 80];
+
+    const items = data.items || [];
+    const rows = items.map((item: any) => [
+      item.date || '-',
+      item.staffName || '-',
+      item.roleTitle || '-',
+      item.status || '-',
+      item.checkIn || '-',
+      item.checkOut || '-',
+      item.note || '-'
+    ]);
+
+    this.renderCustomTable(headers, colWidths, rows);
   }
 
   // --- MODULE 5 RENDERERS ---
