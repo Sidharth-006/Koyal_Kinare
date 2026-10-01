@@ -139,7 +139,7 @@ export const api = {
   ): Promise<{ admin: AdminDTO }> => {
     const maxRetries = options?.maxRetries ?? 6;
     let delay = options?.retryDelayMs ?? 2500;
-    const timeoutMs = options?.timeoutMs ?? 20000;
+    const timeoutMs = options?.timeoutMs ?? 60000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const controller = new AbortController();
