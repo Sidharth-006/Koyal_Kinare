@@ -50,9 +50,6 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     credentials: 'include'
   };
 
-  const response = await fetch(endpoint, config);
-  const data = await response.json().catch(() => ({}));
-
   const SAFE_ERROR_MAPPINGS: Record<string, string> = {
     VALIDATION_ERROR: 'Please review the highlighted fields.',
     DAY_ALREADY_CLOSED: 'This day is already closed. Reopen it before changing these details.',
@@ -61,6 +58,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     RATE_LIMITED: 'Too many attempts. Please wait a moment and try again.',
     INTERNAL_ERROR: 'Something went wrong. Please try again.',
     UNAUTHORIZED: 'Sign-in details are incorrect. Please try again.',
+    SERVER_UNAVAILABLE: 'The server is currently starting up or temporarily unavailable. Please try again in a few moments.',
+    NETWORK_ERROR: 'Unable to connect to the server. Please check your network connection and try again.',
+    TIMEOUT_ERROR: 'Request timed out while connecting to the server. Please try again.',
     DUPLICATE_INVENTORY_ITEM: 'An active inventory item already uses this name.',
     ITEM_HAS_STOCK_HISTORY: 'Base unit cannot change after stock activity has started.',
     ITEM_IN_USE: 'Cannot archive inventory item that is in use by pending purchases or operations.',
@@ -83,9 +83,34 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     REPORT_TOO_LARGE: 'Attendance report date range cannot exceed 366 days.'
   };
 
+  let response: Response;
+  try {
+    response = await fetch(endpoint, config);
+  } catch (fetchErr: any) {
+    if (fetchErr?.name === 'AbortError') {
+      throw new ApiError('Request timed out while connecting to the server.', 'TIMEOUT_ERROR', 408);
+    }
+    throw new ApiError(
+      'Unable to connect to the server. Please check your network connection and try again.',
+      'NETWORK_ERROR',
+      0
+    );
+  }
+
+  const data = await response.json().catch(() => ({}));
+
   if (!response.ok) {
     const errorObj = data.error || {};
-    const code = errorObj.code || (response.status === 401 ? 'UNAUTHORIZED' : 'UNKNOWN_ERROR');
+    let code = errorObj.code;
+    if (!code) {
+      if (response.status === 401) {
+        code = 'UNAUTHORIZED';
+      } else if (response.status === 502 || response.status === 503 || response.status === 504) {
+        code = 'SERVER_UNAVAILABLE';
+      } else {
+        code = 'UNKNOWN_ERROR';
+      }
+    }
     const safeMessage = (code === 'VALIDATION_ERROR' && errorObj.message)
       ? errorObj.message
       : (SAFE_ERROR_MAPPINGS[code] || errorObj.message || 'An unexpected error occurred. Please try again.');
@@ -95,13 +120,90 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
   return data.data as T;
 }
 
+export interface LoginOptions {
+  onRetry?: (status: string, attempt: number) => void;
+  maxRetries?: number;
+  retryDelayMs?: number;
+  timeoutMs?: number;
+}
+
 export const api = {
+  // Wake-up ping for Render cold start
+  wakeUp: () =>
+    fetch('/api/health', { credentials: 'include' }).catch(() => {}),
+
   // Auth
-  login: (payload: { email?: string; password?: string }) =>
-    request<{ admin: AdminDTO }>('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  login: async (
+    payload: { email?: string; password?: string },
+    options?: LoginOptions
+  ): Promise<{ admin: AdminDTO }> => {
+    const maxRetries = options?.maxRetries ?? 6;
+    let delay = options?.retryDelayMs ?? 2500;
+    const timeoutMs = options?.timeoutMs ?? 20000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const result = await request<{ admin: AdminDTO }>('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        return result;
+      } catch (err: any) {
+        clearTimeout(timer);
+
+        // Genuine auth/validation client errors (401, 400, 422) must NEVER be retried
+        const isClientAuthError =
+          err instanceof ApiError &&
+          err.statusCode >= 400 &&
+          err.statusCode < 500 &&
+          err.statusCode !== 408;
+
+        if (isClientAuthError) {
+          throw err;
+        }
+
+        // Transient errors caused by Render cold start: network failure, abort/timeout, or 5xx (502, 503, 504)
+        const isTransient =
+          err instanceof ApiError
+            ? err.statusCode === 0 || err.statusCode === 408 || err.statusCode >= 500 || err.code === 'NETWORK_ERROR' || err.code === 'SERVER_UNAVAILABLE'
+            : true;
+
+        if (!isTransient || attempt >= maxRetries) {
+          if (err instanceof ApiError && (err.statusCode >= 500 || err.statusCode === 0 || err.statusCode === 408)) {
+            throw new ApiError(
+              'The server is taking longer than expected to respond. Please try again in a few moments.',
+              'SERVER_UNAVAILABLE',
+              err.statusCode || 503
+            );
+          }
+          throw err;
+        }
+
+        // Notify UI of cold start waking state
+        if (options?.onRetry) {
+          options.onRetry('Connecting to server...', attempt);
+        }
+
+        // Backoff delay before retrying
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay + 1000, 5000);
+      }
+    }
+
+    throw new ApiError(
+      'The server is taking longer than expected to respond. Please try again in a few moments.',
+      'SERVER_UNAVAILABLE',
+      503
+    );
+  },
   logout: () =>
     request<{ message: string }>('/api/auth/logout', { method: 'POST' }),
-  me: () =>
+  me: async () =>
     request<{ admin: AdminDTO }>('/api/auth/me'),
 
   // Settings

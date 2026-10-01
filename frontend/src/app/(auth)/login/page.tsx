@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, Coffee, Leaf } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
@@ -75,9 +75,20 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
+  const isSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    // Proactively send wake-up ping to backend when login screen mounts
+    api.wakeUp();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current || isLoading) {
+      return;
+    }
+
     setGeneralError(null);
 
     const newErrors: { email?: string; password?: string } = {};
@@ -91,19 +102,30 @@ export default function LoginPage() {
 
     setErrors({});
     setIsLoading(true);
+    setLoadingStatus(null);
+    isSubmittingRef.current = true;
 
     try {
-      await api.login({ email: email.trim(), password });
+      await api.login(
+        { email: email.trim(), password },
+        {
+          onRetry: (status) => {
+            setLoadingStatus(status);
+          }
+        }
+      );
       showToast('Welcome back! Signed in successfully.', 'success');
       router.push('/dashboard');
     } catch (err: any) {
       if (err instanceof ApiError) {
         setGeneralError(err.message);
       } else {
-        setGeneralError('Sign-in details are incorrect. Please try again.');
+        setGeneralError('Unable to connect to the server. Please try again.');
       }
     } finally {
       setIsLoading(false);
+      setLoadingStatus(null);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -252,7 +274,10 @@ export default function LoginPage() {
                 className="w-full mt-3 py-3.5 px-6 bg-[#1C3026] hover:bg-[#14241C] active:bg-[#0B1510] text-[#F4EFE6] rounded-xl font-semibold text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 disabled:opacity-70 min-h-[48px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1C3026]"
               >
                 {isLoading ? (
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <>
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                    <span>{loadingStatus || 'Signing In...'}</span>
+                  </>
                 ) : (
                   <>
                     <span>Sign In</span>
@@ -260,6 +285,12 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
+
+              {loadingStatus && (
+                <p className="text-center text-xs text-[#787062] mt-2.5 animate-pulse font-medium">
+                  Waking up cloud service, this may take a moment...
+                </p>
+              )}
 
             </form>
 
