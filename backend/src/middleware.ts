@@ -26,9 +26,12 @@ function getAllowedOrigins(): string[] {
 function isAllowedOrigin(origin: string | null): string | null {
   if (!origin) return null;
   const allowed = getAllowedOrigins();
-  // If no origins configured in production, deny
-  if (allowed.length === 0) return null;
-  return allowed.includes(origin) ? origin : null;
+  if (allowed.includes(origin)) return origin;
+  // Automatically allow Render deployments (.onrender.com)
+  if (origin.endsWith('.onrender.com') || origin.includes('koyal-kinare')) {
+    return origin;
+  }
+  return null;
 }
 
 function setCorsHeaders(response: NextResponse, origin: string): NextResponse {

@@ -20,8 +20,20 @@ import {
   AttendanceSummaryResponseDTO, AttendanceReportParams
 } from './types';
 
-/** Base URL for all API requests. Resolved from NEXT_PUBLIC_API_URL env var. */
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+/** Base URL for all API requests. Dynamically resolves from NEXT_PUBLIC_API_URL or environment host. */
+export function getApiBase(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim() !== '') {
+    return envUrl.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1') {
+      return 'https://koyal-kinare.onrender.com';
+    }
+  }
+  return 'http://localhost:3000';
+}
 
 export class ApiError extends Error {
   public readonly code: string;
@@ -86,7 +98,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     REPORT_TOO_LARGE: 'Attendance report date range cannot exceed 366 days.'
   };
 
-  const url = endpoint.startsWith('/') ? `${API_BASE}${endpoint}` : endpoint;
+  const apiBase = getApiBase();
+  const url = endpoint.startsWith('/') ? `${apiBase}${endpoint}` : endpoint;
 
   let response: Response;
   try {
@@ -135,7 +148,7 @@ export interface LoginOptions {
 export const api = {
   // Wake-up ping for Render cold start
   wakeUp: () =>
-    fetch(`${API_BASE}/api/health`, { credentials: 'include' }).catch(() => {}),
+    fetch(`${getApiBase()}/api/health`, { credentials: 'include' }).catch(() => {}),
 
   // Auth
   login: async (
@@ -385,7 +398,7 @@ export const api = {
   uploadPurchaseAttachment: async (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch(`${API_BASE}/api/purchases/${id}/attachment`, {
+    const response = await fetch(`${getApiBase()}/api/purchases/${id}/attachment`, {
       method: 'POST',
       body: formData,
       credentials: 'include'
@@ -399,7 +412,7 @@ export const api = {
     return data.data as { attachment: PurchaseAttachmentDTO; purchaseId: string };
   },
   downloadPurchaseAttachment: async (id: string, fallbackFileName?: string) => {
-    const response = await fetch(`${API_BASE}/api/purchases/${id}/attachment`, {
+    const response = await fetch(`${getApiBase()}/api/purchases/${id}/attachment`, {
       method: 'GET',
       credentials: 'include'
     });
