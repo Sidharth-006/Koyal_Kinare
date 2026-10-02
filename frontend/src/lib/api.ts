@@ -154,17 +154,33 @@ export interface LoginOptions {
 
 export const api = {
   // Wake-up ping for Render cold start
-  wakeUp: () =>
-    fetch(`${getApiBase()}/api/health`, { credentials: 'include' }).catch(() => {}),
+  wakeUp: async () => {
+    const apiBase = getApiBase();
+    for (let i = 0; i < 3; i++) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch(`${apiBase}/api/health`, {
+          credentials: 'include',
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (res.ok) return;
+      } catch {
+        // Ignore and retry on transient cold start error
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  },
 
   // Auth
   login: async (
     payload: { email?: string; password?: string },
     options?: LoginOptions
   ): Promise<{ admin: AdminDTO }> => {
-    const maxRetries = options?.maxRetries ?? 6;
-    let delay = options?.retryDelayMs ?? 2500;
-    const timeoutMs = options?.timeoutMs ?? 60000;
+    const maxRetries = options?.maxRetries ?? 5;
+    let delay = options?.retryDelayMs ?? 1500;
+    const timeoutMs = options?.timeoutMs ?? 12000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const controller = new AbortController();

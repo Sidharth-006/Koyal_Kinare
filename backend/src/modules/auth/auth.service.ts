@@ -4,7 +4,11 @@ import { createSessionCookie, createLogoutCookie } from '@/shared/auth/session';
 import { UnauthorizedError, ValidationError } from '@/shared/errors';
 
 export class AuthService {
+  private static isAdminSeeded = false;
+
   static async seedInitialAdminIfNeeded(): Promise<void> {
+    if (this.isAdminSeeded) return;
+
     const count = await AuthRepository.countAdmins();
     if (count === 0) {
       const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Admin@KoyalKinare123';
@@ -15,6 +19,7 @@ export class AuthService {
         displayName: 'Cafe Admin'
       });
     }
+    this.isAdminSeeded = true;
   }
 
   static async login(params: { email?: string; password?: string }): Promise<{ admin: { id: string; email: string; displayName: string }; token: string; cookieHeader: string }> {

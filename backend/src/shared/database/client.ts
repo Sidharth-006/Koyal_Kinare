@@ -7,8 +7,8 @@ const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgr
 export const pool = new Pool({
   connectionString,
   max: 10,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 15000,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 20000,
 });
 
 pool.on('error', (err) => {
