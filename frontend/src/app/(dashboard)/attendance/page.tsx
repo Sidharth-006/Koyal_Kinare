@@ -18,10 +18,11 @@ import { Input } from '@/components/ui/Input';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/ToastContext';
 import { AttendanceStatusBadge } from '@/components/attendance/AttendanceStatusBadge';
+import { AttendanceSummaryView } from '@/components/attendance/AttendanceSummaryView';
 import {
   Calendar, ChevronLeft, ChevronRight, Save, RotateCcw,
   CheckCircle2, AlertCircle, Clock, Users, ArrowLeft,
-  CalendarCheck, Shield, FileText, Check
+  CalendarCheck, Shield, FileText, Check, BarChart3
 } from 'lucide-react';
 
 interface RowState {
@@ -104,8 +105,30 @@ function AttendanceRosterContent() {
   const { showToast } = useToast();
 
   const queryDate = searchParams.get('date');
+  const queryTab = searchParams.get('tab');
   const today = getTodayIsoDate();
   const selectedDate = queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate) ? queryDate : today;
+
+  const [activeTab, setActiveTab] = useState<'ROSTER' | 'SUMMARY'>(
+    queryTab === 'summary' ? 'SUMMARY' : 'ROSTER'
+  );
+
+  useEffect(() => {
+    if (queryTab === 'summary') {
+      setActiveTab('SUMMARY');
+    } else if (queryTab === 'roster') {
+      setActiveTab('ROSTER');
+    }
+  }, [queryTab]);
+
+  const handleTabChange = (tab: 'ROSTER' | 'SUMMARY') => {
+    setActiveTab(tab);
+    if (tab === 'SUMMARY') {
+      router.push('/attendance?tab=summary');
+    } else {
+      router.push(`/attendance?date=${selectedDate}`);
+    }
+  };
 
   const [roster, setRoster] = useState<DailyAttendanceRosterItemDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -454,12 +477,14 @@ function AttendanceRosterContent() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-forest-800">
-              Daily Attendance Roster
+              {activeTab === 'ROSTER' ? 'Daily Attendance Roster' : 'Attendance Summary & Export'}
             </h1>
             <Badge variant="forest">Phase 3</Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Record shifts, daily attendance, and operational time logs.
+            {activeTab === 'ROSTER'
+              ? 'Record shifts, daily attendance, and operational time logs.'
+              : 'Analyze attendance rates, review staff-wise summaries, and export reports.'}
           </p>
         </div>
 
@@ -476,8 +501,41 @@ function AttendanceRosterContent() {
         </div>
       </div>
 
-      {/* Date Navigation Bar */}
-      <Card className="p-4 md:p-5">
+      {/* Tab Switcher */}
+      <div className="flex items-center gap-1.5 p-1 bg-cream-100/80 rounded-2xl border border-cream-200/80 w-fit">
+        <button
+          type="button"
+          onClick={() => handleTabChange('ROSTER')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'ROSTER'
+              ? 'bg-white text-forest-900 shadow-xs border border-forest-800/10'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <CalendarCheck className="w-4 h-4 text-forest-800" />
+          <span>Daily Roster</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('SUMMARY')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'SUMMARY'
+              ? 'bg-white text-forest-900 shadow-xs border border-forest-800/10'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4 text-forest-800" />
+          <span>Summary & Export</span>
+        </button>
+      </div>
+
+      {activeTab === 'SUMMARY' ? (
+        <AttendanceSummaryView />
+      ) : (
+        <>
+          {/* Date Navigation Bar */}
+          <Card className="p-4 md:p-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Date controls */}
           <div className="flex flex-wrap items-center gap-2">
@@ -964,6 +1022,8 @@ function AttendanceRosterContent() {
             </Button>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
