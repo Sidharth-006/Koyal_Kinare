@@ -20,6 +20,9 @@ import {
   AttendanceSummaryResponseDTO, AttendanceReportParams
 } from './types';
 
+/** Base URL for all API requests. Resolved from NEXT_PUBLIC_API_URL env var. */
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+
 export class ApiError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
@@ -83,9 +86,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     REPORT_TOO_LARGE: 'Attendance report date range cannot exceed 366 days.'
   };
 
+  const url = endpoint.startsWith('/') ? `${API_BASE}${endpoint}` : endpoint;
+
   let response: Response;
   try {
-    response = await fetch(endpoint, config);
+    response = await fetch(url, config);
   } catch (fetchErr: any) {
     if (fetchErr?.name === 'AbortError') {
       throw new ApiError('Request timed out while connecting to the server.', 'TIMEOUT_ERROR', 408);
@@ -130,7 +135,7 @@ export interface LoginOptions {
 export const api = {
   // Wake-up ping for Render cold start
   wakeUp: () =>
-    fetch('/api/health', { credentials: 'include' }).catch(() => {}),
+    fetch(`${API_BASE}/api/health`, { credentials: 'include' }).catch(() => {}),
 
   // Auth
   login: async (
@@ -380,7 +385,7 @@ export const api = {
   uploadPurchaseAttachment: async (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch(`/api/purchases/${id}/attachment`, {
+    const response = await fetch(`${API_BASE}/api/purchases/${id}/attachment`, {
       method: 'POST',
       body: formData,
       credentials: 'include'
@@ -394,7 +399,7 @@ export const api = {
     return data.data as { attachment: PurchaseAttachmentDTO; purchaseId: string };
   },
   downloadPurchaseAttachment: async (id: string, fallbackFileName?: string) => {
-    const response = await fetch(`/api/purchases/${id}/attachment`, {
+    const response = await fetch(`${API_BASE}/api/purchases/${id}/attachment`, {
       method: 'GET',
       credentials: 'include'
     });

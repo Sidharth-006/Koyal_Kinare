@@ -4,14 +4,11 @@ if (!backendUrl || (process.env.NODE_ENV === 'production' && (backendUrl.include
 }
 
 const nextConfig = {
+  output: 'export',
+  trailingSlash: true,
   reactStrictMode: true,
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${backendUrl.replace(/\/$/, '')}/api/:path*`
-      }
-    ];
+  images: {
+    unoptimized: true
   }
 };
 

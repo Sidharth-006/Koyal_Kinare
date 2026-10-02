@@ -1,0 +1,15 @@
+services:
+  # Frontend Static Site (Hosted on Render CDN - 100% Free, Zero Cold Start, Never Sleeps)
+  - type: static
+    name: koyal-kinare-frontend
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/out
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://koyal-kinare.onrender.com
+      - key: NEXT_PUBLIC_APP_NAME
+        value: Koyal Kinare Cafe Management
