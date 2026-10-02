@@ -59,6 +59,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     headers['Idempotency-Key'] = idempotencyKey;
   }
 
+  if (typeof window !== 'undefined') {
+    const savedToken = localStorage.getItem('koyal_token');
+    if (savedToken && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${savedToken}`;
+    }
+  }
+
   const config: RequestInit = {
     ...options,
     headers,
@@ -164,12 +171,15 @@ export const api = {
       const timer = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const result = await request<{ admin: AdminDTO }>('/api/auth/login', {
+        const result = await request<{ admin: AdminDTO; token?: string }>('/api/auth/login', {
           method: 'POST',
           body: JSON.stringify(payload),
           signal: controller.signal
         });
         clearTimeout(timer);
+        if (result.token && typeof window !== 'undefined') {
+          localStorage.setItem('koyal_token', result.token);
+        }
         return result;
       } catch (err: any) {
         clearTimeout(timer);
@@ -219,10 +229,22 @@ export const api = {
       503
     );
   },
-  logout: () =>
-    request<{ message: string }>('/api/auth/logout', { method: 'POST' }),
-  me: async () =>
-    request<{ admin: AdminDTO }>('/api/auth/me'),
+  logout: async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('koyal_token');
+    }
+    return request<{ message: string }>('/api/auth/logout', { method: 'POST' });
+  },
+  me: async () => {
+    try {
+      return await request<{ admin: AdminDTO }>('/api/auth/me');
+    } catch (err) {
+      if (err instanceof ApiError && err.statusCode === 401 && typeof window !== 'undefined') {
+        localStorage.removeItem('koyal_token');
+      }
+      throw err;
+    }
+  },
 
   // Settings
   getSettings: () =>

@@ -4,7 +4,7 @@ import { extractRawTokenFromHeader } from './session';
 import { UnauthorizedError } from '../errors';
 
 export async function requireAdmin(req: NextRequest): Promise<{ id: string; email: string; displayName: string }> {
-  const rawToken = extractRawTokenFromHeader(req.headers.get('cookie'));
+  const rawToken = extractRawTokenFromHeader(req.headers.get('cookie'), req.headers.get('authorization'));
   if (!rawToken) {
     throw new UnauthorizedError('Unauthorized access');
   }

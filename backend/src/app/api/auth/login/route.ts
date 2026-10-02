@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const result = await AuthService.login(body);
     return successResponse(
-      { admin: result.admin },
+      { admin: result.admin, token: result.token },
       200,
       { 'Set-Cookie': result.cookieHeader }
     );

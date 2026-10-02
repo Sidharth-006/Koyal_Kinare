@@ -23,9 +23,19 @@ export function createLogoutCookie(): string {
   });
 }
 
-export function extractRawTokenFromHeader(cookieHeader: string | null): string | null {
-  if (!cookieHeader) return null;
-  const cookies = parse(cookieHeader);
-  return cookies[COOKIE_NAME] || null;
+export function extractRawTokenFromHeader(cookieHeader: string | null, authHeader?: string | null): string | null {
+  // 1. Check Authorization: Bearer <token>
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7).trim();
+    if (token) return token;
+  }
+
+  // 2. Check Cookie header
+  if (cookieHeader) {
+    const cookies = parse(cookieHeader);
+    if (cookies[COOKIE_NAME]) return cookies[COOKIE_NAME];
+  }
+
+  return null;
 }
 

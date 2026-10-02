@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const rawToken = extractRawTokenFromHeader(req.headers.get('cookie'));
+    const rawToken = extractRawTokenFromHeader(req.headers.get('cookie'), req.headers.get('authorization'));
     if (!rawToken) {
       return errorResponse(new UnauthorizedError('Unauthorized access'));
     }

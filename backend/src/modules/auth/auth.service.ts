@@ -17,7 +17,7 @@ export class AuthService {
     }
   }
 
-  static async login(params: { email?: string; password?: string }): Promise<{ admin: { id: string; email: string; displayName: string }; cookieHeader: string }> {
+  static async login(params: { email?: string; password?: string }): Promise<{ admin: { id: string; email: string; displayName: string }; token: string; cookieHeader: string }> {
     if (!params.email || !params.password) {
       throw new ValidationError('Email and password are required.');
     }
@@ -51,6 +51,7 @@ export class AuthService {
         email: admin.email,
         displayName: admin.display_name
       },
+      token: rawToken,
       cookieHeader
     };
   }
