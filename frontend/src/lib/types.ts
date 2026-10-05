@@ -1000,3 +1000,108 @@ export interface AttendanceReportParams {
   staffId?: string;
   format?: 'XLSX' | 'PDF';
 }
+
+// ==========================================
+// Phase 3, Module 2: Recipe Management & Versioning Types
+// ==========================================
+
+export type RecipeStatus = 'ACTIVE' | 'INACTIVE';
+export type RecipeVersionStatus = 'DRAFT' | 'ACTIVE' | 'SUPERSEDED' | 'INACTIVE';
+
+export interface RecipeDTO {
+  id: string;
+  menuItemId: string;
+  status: RecipeStatus;
+  activeVersionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecipeIngredientDTO {
+  id: string;
+  inventoryItemId: string;
+  itemName: string;
+  unit: string;
+  quantity: string;
+  wastageAllowancePct: string;
+  note: string | null;
+}
+
+export interface RecipeVersionSummaryDTO {
+  id: string;
+  versionNumber: number;
+  status: RecipeVersionStatus;
+  effectiveFrom: string | null;
+  supersededAt: string | null;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface RecipeVersionDetailDTO extends RecipeVersionSummaryDTO {
+  recipeId: string;
+  ingredients: RecipeIngredientDTO[];
+}
+
+export interface MenuItemRecipeResponseDTO {
+  recipe: RecipeDTO | null;
+  activeVersion: RecipeVersionDetailDTO | null;
+  draftVersion: RecipeVersionDetailDTO | null;
+  versions: RecipeVersionSummaryDTO[];
+}
+
+export interface RecipeCoverageItemDTO {
+  menuItemId: string;
+  menuItemName: string;
+  categoryName: string;
+  recipeId: string | null;
+  status: RecipeStatus | null;
+  activeVersionId: string | null;
+  activeVersionNumber: number | null;
+  ingredientCount: number;
+  hasActiveRecipe: boolean;
+  updatedAt: string | null;
+}
+
+export interface RecipeListParams {
+  status?: 'ACTIVE' | 'INACTIVE' | 'ALL' | string;
+  missingOnly?: boolean | string;
+  page?: number | string;
+}
+
+export interface RecipeListResultDTO {
+  recipes: RecipeCoverageItemDTO[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface CreateDraftIngredientInput {
+  inventoryItemId: string;
+  quantity: number | string;
+  wastageAllowancePct?: number | string;
+  note?: string;
+}
+
+export interface CreateDraftPayload {
+  ingredients: CreateDraftIngredientInput[];
+  note?: string;
+}
+
+export interface UpdateDraftPayload {
+  ingredients: CreateDraftIngredientInput[];
+  note?: string;
+}
+
+export interface ActivateVersionPayload {
+  confirm?: boolean;
+}
+
+export interface DeactivateVersionPayload {
+  confirm?: boolean;
+  reason: string;
+}
+

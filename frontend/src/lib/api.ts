@@ -17,7 +17,10 @@ import {
   StaffDTO, CreateStaffPayload, UpdateStaffPayload, StaffListParams,
   AttendanceStatus, AttendanceRecordDTO, DailyAttendanceRosterItemDTO,
   SaveAttendancePayload, BulkSaveAttendancePayload, BulkSaveAttendanceResultDTO,
-  AttendanceSummaryResponseDTO, AttendanceReportParams
+  AttendanceSummaryResponseDTO, AttendanceReportParams,
+  RecipeListParams, RecipeListResultDTO, MenuItemRecipeResponseDTO,
+  RecipeVersionDetailDTO, CreateDraftPayload, UpdateDraftPayload,
+  ActivateVersionPayload, DeactivateVersionPayload
 } from './types';
 
 /** Base URL for all API requests. Dynamically resolves from NEXT_PUBLIC_API_URL or environment host. */
@@ -102,7 +105,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     ATTENDANCE_TIME_INVALID: 'Check-in and check-out times must be valid and check-out must be after check-in.',
     ATTENDANCE_CONFLICT: 'Attendance record was updated on another device. Please refresh.',
     INVALID_ATTENDANCE_STATUS: 'Please provide a valid attendance status.',
-    REPORT_TOO_LARGE: 'Attendance report date range cannot exceed 366 days.'
+    REPORT_TOO_LARGE: 'Attendance report date range cannot exceed 366 days.',
+    INGREDIENT_ARCHIVED: 'This ingredient is no longer active.',
+    RECIPE_CONFLICT: 'This recipe changed elsewhere. Refresh before continuing.',
+    RECIPE_VERSION_NOT_DRAFT: 'Only draft recipe versions can be edited or activated.',
+    DUPLICATE_RECIPE_INGREDIENT: 'Duplicate inventory item specified in recipe ingredients.',
+    MENU_ITEM_ARCHIVED: 'Cannot create or modify recipe for an archived or inactive menu item.'
   };
 
   const apiBase = getApiBase();
@@ -643,7 +651,39 @@ export const api = {
     if (params.format) query.set('format', params.format);
     const queryStr = query.toString();
     return request<ExportResultDTO>(`/api/reports/attendance${queryStr ? `?${queryStr}` : ''}`);
-  }
+  },
+
+  // Phase 3, Module 2: Recipe Management & Versioning
+  listRecipes: (params?: RecipeListParams) => {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== 'ALL') query.set('status', params.status);
+    if (params?.missingOnly !== undefined) query.set('missingOnly', String(params.missingOnly));
+    if (params?.page) query.set('page', String(params.page));
+    const queryStr = query.toString();
+    return request<RecipeListResultDTO>(`/api/recipes${queryStr ? `?${queryStr}` : ''}`);
+  },
+  getMenuItemRecipe: (menuItemId: string) =>
+    request<MenuItemRecipeResponseDTO>(`/api/menu/items/${encodeURIComponent(menuItemId)}/recipe`),
+  createRecipeDraft: (menuItemId: string, payload: CreateDraftPayload) =>
+    request<RecipeVersionDetailDTO>(`/api/menu/items/${encodeURIComponent(menuItemId)}/recipe/versions`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+  updateRecipeDraft: (versionId: string, payload: UpdateDraftPayload) =>
+    request<RecipeVersionDetailDTO>(`/api/recipe-versions/${encodeURIComponent(versionId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    }),
+  activateRecipeVersion: (versionId: string, payload: ActivateVersionPayload = { confirm: true }, idempotencyKey?: string) =>
+    request<RecipeVersionDetailDTO>(`/api/recipe-versions/${encodeURIComponent(versionId)}/activate`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, idempotencyKey),
+  deactivateRecipeVersion: (versionId: string, payload: DeactivateVersionPayload, idempotencyKey?: string) =>
+    request<{ message: string; versionId: string; recipeId: string; status: string }>(`/api/recipe-versions/${encodeURIComponent(versionId)}/deactivate`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }, idempotencyKey)
 };
 
 export function downloadExportFile(exportData: ExportResultDTO, filename: string) {

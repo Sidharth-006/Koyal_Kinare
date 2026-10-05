@@ -281,7 +281,7 @@ describe('Attendance Flow Integration Tests', () => {
     await expect(
       AttendanceService.saveSingleAttendance(
         tempStaff.id,
-        '2026-10-01',
+        '2026-12-01',
         { status: 'PRESENT' },
         testAdminId
       )

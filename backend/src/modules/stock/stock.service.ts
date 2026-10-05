@@ -506,6 +506,62 @@ export class StockLedgerService {
     };
   }
 
+  static async recordBillConsumption(
+    params: {
+      inventoryItemId: string;
+      businessDate: string;
+      quantityDelta: Decimal;
+      unitCost?: string | null;
+      sourceId: string;
+      reason?: string | null;
+      createdBy?: string | null;
+    },
+    client: PoolClient
+  ): Promise<StockMovement> {
+    const { movement } = await this.recordMovementInternal(
+      {
+        inventoryItemId: params.inventoryItemId,
+        businessDate: params.businessDate,
+        movementType: 'BILL_CONSUMPTION',
+        quantityDelta: params.quantityDelta,
+        unitCost: params.unitCost,
+        sourceType: 'BILL',
+        sourceId: params.sourceId,
+        reason: params.reason || 'Bill consumption',
+        createdBy: params.createdBy
+      },
+      client
+    );
+    return movement;
+  }
+
+  static async recordBillVoidReturn(
+    params: {
+      inventoryItemId: string;
+      businessDate: string;
+      quantityDelta: Decimal;
+      sourceId: string;
+      reason?: string | null;
+      createdBy?: string | null;
+    },
+    client: PoolClient
+  ): Promise<StockMovement> {
+    const { movement } = await this.recordMovementInternal(
+      {
+        inventoryItemId: params.inventoryItemId,
+        businessDate: params.businessDate,
+        movementType: 'BILL_VOID_RETURN',
+        quantityDelta: params.quantityDelta,
+        sourceType: 'BILL_VOID',
+        sourceId: params.sourceId,
+        reason: params.reason || 'Bill void return',
+        createdBy: params.createdBy
+      },
+      client
+    );
+    return movement;
+  }
+
   // --- QUERY APIS ---
 
   static async getItemStock(inventoryItemId: string): Promise<ItemStockSummary> {

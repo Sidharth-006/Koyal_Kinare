@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Receipt, SlidersHorizontal,
   BarChart3, FileText, Settings, LogOut, Coffee, Calendar, User, Menu as MenuIcon, X, Sparkles, Package, Truck, ShoppingCart, History,
-  Users, UserCheck
+  Users, UserCheck, BookOpen
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api } from '@/lib/api';
@@ -44,6 +44,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/pos', label: 'POS / Billing', icon: ShoppingBag },
     { href: '/menu', label: 'Menu', icon: UtensilsCrossed },
+    { href: '/recipes', label: 'Recipes', icon: BookOpen },
     { href: '/inventory/items', label: 'Inventory Items', icon: Package },
     { href: '/inventory/movements', label: 'Stock Ledger', icon: History },
     { href: '/suppliers', label: 'Suppliers', icon: Truck },

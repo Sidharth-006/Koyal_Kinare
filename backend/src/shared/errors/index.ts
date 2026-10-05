@@ -167,5 +167,35 @@ export class InvalidAttendanceStatusError extends AppError {
   }
 }
 
+export class MenuItemArchivedError extends AppError {
+  constructor(message: string = 'Cannot create or modify recipe for an archived or inactive menu item.') {
+    super(message, 'MENU_ITEM_ARCHIVED', 400);
+  }
+}
+
+export class IngredientArchivedError extends AppError {
+  constructor(message: string = 'One or more selected inventory items are archived or inactive.') {
+    super(message, 'INGREDIENT_ARCHIVED', 400);
+  }
+}
+
+export class RecipeVersionNotDraftError extends AppError {
+  constructor(message: string = 'Only draft recipe versions can be edited or activated.') {
+    super(message, 'RECIPE_VERSION_NOT_DRAFT', 400);
+  }
+}
+
+export class DuplicateRecipeIngredientError extends AppError {
+  constructor(message: string = 'Duplicate inventory item specified in recipe ingredients.') {
+    super(message, 'DUPLICATE_RECIPE_INGREDIENT', 409);
+  }
+}
+
+export class RecipeConflictError extends AppError {
+  constructor(message: string = 'Recipe state changed concurrently. Please refresh.') {
+    super(message, 'RECIPE_CONFLICT', 409);
+  }
+}
+
 
 

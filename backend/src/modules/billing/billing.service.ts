@@ -7,6 +7,7 @@ import { calculateTaxExclusive, calculateTaxInclusive, toDecimal, addMoney, mult
 import { getTodayDateString } from '@/shared/time';
 import { ValidationError, NotFoundError, ConflictError } from '@/shared/errors';
 import { IdempotencyRepository } from '../audit/idempotency.repository';
+import { CostingService } from './costing.service';
 
 export interface CreateBillItemInput {
   menuItemId: string;
@@ -168,10 +169,14 @@ export class BillingService {
         client
       );
 
+      // Phase 3 Module 3: Process bill consumption and costing
+      const costCoverage = await CostingService.processBillConsumption(bill, createdLines, adminId, client);
+
       const fullBill = {
         ...bill,
         lines: createdLines,
-        payments: [payment]
+        payments: [payment],
+        cost_coverage: costCoverage
       };
 
       await AuditService.logEvent(
@@ -202,31 +207,64 @@ export class BillingService {
     return result;
   }
 
-  static async voidBill(billId: string, voidReason: string, adminId: string, requestId?: string) {
+  static async voidBill(
+    billId: string,
+    voidReason: string,
+    adminId: string,
+    idempotencyKey?: string,
+    requestId?: string
+  ) {
     if (!voidReason || voidReason.trim().length === 0) {
       throw new ValidationError('Mandatory void reason is required.');
     }
 
-    const bill = await BillingRepository.findBillById(billId);
-    if (!bill) {
-      throw new NotFoundError('Bill not found.');
-    }
+    const trimmedReason = voidReason.trim();
 
-    if (bill.status === 'VOIDED') {
-      throw new ValidationError('Bill is already voided.');
+    // Step A: Idempotency Cache Lookup (Pre-Transaction)
+    let requestHash: string | undefined;
+    if (idempotencyKey) {
+      const payload = { action: 'VOID_BILL', billId, voidReason: trimmedReason };
+      requestHash = IdempotencyRepository.computeHash(payload);
+      const existing = await IdempotencyRepository.find(idempotencyKey);
+      if (existing) {
+        if (existing.request_hash === requestHash) {
+          return existing.response_body;
+        } else {
+          throw new ConflictError('Idempotency key payload mismatch.');
+        }
+      }
     }
 
     return withTransaction(async (client) => {
+      // Step B: Lock bill row FOR UPDATE and verify status
+      const { rows } = await client.query('SELECT * FROM bills WHERE id = $1 FOR UPDATE;', [billId]);
+      const bill = rows[0];
+      if (!bill) {
+        throw new NotFoundError('Bill not found.');
+      }
+      if (bill.status === 'VOIDED') {
+        throw new ValidationError('Bill is already voided.');
+      }
+
       const voidRecord = await BillingRepository.createBillVoid(
         {
           billId,
-          voidReason: voidReason.trim(),
+          voidReason: trimmedReason,
           voidedBy: adminId
         },
         client
       );
 
-      const updatedBill = await BillingRepository.findBillById(billId);
+      // Phase 3 Module 3: Compensating stock movements and cost-basis restoration
+      await CostingService.processBillVoid(
+        billId,
+        voidRecord.id,
+        bill.business_date,
+        adminId,
+        client
+      );
+
+      const updatedBill = await BillingRepository.findBillById(billId, client);
 
       await AuditService.logEvent(
         {
@@ -237,10 +275,21 @@ export class BillingService {
           requestId,
           beforeState: bill,
           afterState: updatedBill,
-          metadata: { voidReason }
+          metadata: { voidReason: trimmedReason }
         },
         client
       );
+
+      // Step C: Save idempotency inside the same transaction
+      if (idempotencyKey && requestHash) {
+        await IdempotencyRepository.save(
+          idempotencyKey,
+          requestHash,
+          200,
+          updatedBill,
+          client
+        );
+      }
 
       return updatedBill;
     });

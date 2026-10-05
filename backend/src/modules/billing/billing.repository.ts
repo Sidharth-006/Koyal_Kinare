@@ -18,6 +18,8 @@ export interface BillRecord {
   lines?: BillLineRecord[];
   payments?: PaymentRecord[];
   void_record?: BillVoidRecord | null;
+  cost_coverage?: any | null;
+  consumptions?: any[];
 }
 
 export interface BillLineRecord {
@@ -151,18 +153,23 @@ export class BillingRepository {
     return rows[0];
   }
 
-  static async findBillById(id: string): Promise<BillRecord | null> {
-    const { rows } = await query('SELECT * FROM bills WHERE id = $1', [id]);
+  static async findBillById(id: string, client?: PoolClient): Promise<BillRecord | null> {
+    const db = client || { query: (t: string, v?: any[]) => query(t, v) };
+    const { rows } = await db.query('SELECT * FROM bills WHERE id = $1', [id]);
     if (!rows[0]) return null;
 
     const bill = rows[0];
-    const { rows: lines } = await query('SELECT * FROM bill_lines WHERE bill_id = $1', [id]);
-    const { rows: payments } = await query('SELECT * FROM payments WHERE bill_id = $1', [id]);
-    const { rows: voidRecords } = await query('SELECT * FROM bill_voids WHERE bill_id = $1', [id]);
+    const { rows: lines } = await db.query('SELECT * FROM bill_lines WHERE bill_id = $1', [id]);
+    const { rows: payments } = await db.query('SELECT * FROM payments WHERE bill_id = $1', [id]);
+    const { rows: voidRecords } = await db.query('SELECT * FROM bill_voids WHERE bill_id = $1', [id]);
+    const { rows: coverageRows } = await db.query('SELECT * FROM bill_cost_coverage WHERE bill_id = $1', [id]);
+    const { rows: consumptionRows } = await db.query('SELECT * FROM bill_consumptions WHERE bill_id = $1 ORDER BY created_at ASC', [id]);
 
     bill.lines = lines;
     bill.payments = payments;
     bill.void_record = voidRecords[0] || null;
+    bill.cost_coverage = coverageRows[0] || null;
+    bill.consumptions = consumptionRows;
     return bill;
   }
 

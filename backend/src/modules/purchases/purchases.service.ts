@@ -13,6 +13,7 @@ import { calculatePurchaseTotals, CalculatedPurchaseLine } from './purchases.mat
 import { SupplierRepository } from '../supplier/supplier.repository';
 import { InventoryRepository } from '../inventory/inventory.repository';
 import { StockLedgerService } from '../stock/stock.service';
+import { CostingService } from '../billing/costing.service';
 import { AuditService } from '../audit/audit.service';
 import { IdempotencyRepository } from '../audit/idempotency.repository';
 import {
@@ -372,6 +373,16 @@ export class PurchaseService {
           client
         );
       }
+
+      // Phase 3 Module 3: Update moving average cost in inventory_cost_state using line.unit_rate
+      await CostingService.recordPurchaseReceiptCost(
+        lines.map((l) => ({
+          inventoryItemId: l.inventory_item_id,
+          quantity: l.quantity,
+          unitRate: l.unit_rate
+        })),
+        client
+      );
 
       // 5. Update purchase status
       const updatedPurchase = await PurchaseRepository.markReceived(id, client);

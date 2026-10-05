@@ -8,7 +8,9 @@ export type StockMovementType =
   | 'MANUAL_DECREASE'
   | 'WASTAGE'
   | 'MANUAL_CONSUMPTION'
-  | 'COUNT_CORRECTION';
+  | 'COUNT_CORRECTION'
+  | 'BILL_CONSUMPTION'
+  | 'BILL_VOID_RETURN';
 
 export interface StockMovement {
   id: string;
