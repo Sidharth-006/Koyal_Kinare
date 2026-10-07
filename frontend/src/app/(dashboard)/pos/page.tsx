@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '@/lib/api';
-import { CatalogDTO, MenuItemDTO, BillDTO } from '@/lib/types';
+import { CatalogDTO, MenuItemDTO, BillDTO, RecipeCoverageStatus, RecipeCoverageItemDTO } from '@/lib/types';
 import { formatINR } from '@/lib/format';
 import { useToast } from '@/components/ui/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { Search, RefreshCw, ShoppingBag, Trash2, Printer, Plus, Minus, Check } from 'lucide-react';
+import { RecipeCoverageBadge } from '@/components/pos/RecipeCoverageBadge';
+import { Search, RefreshCw, ShoppingBag, Trash2, Printer, Plus, Minus, Check, AlertCircle } from 'lucide-react';
 
 interface CartItem {
   menuItem: MenuItemDTO;
@@ -40,6 +41,10 @@ export default function POSPage() {
   const [completedBill, setCompletedBill] = useState<BillDTO | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
 
+  // Phase 3 Module 3: Recipe Coverage Map & Stock Error State
+  const [recipeCoverageMap, setRecipeCoverageMap] = useState<Record<string, boolean>>({});
+  const [stockError, setStockError] = useState<string | null>(null);
+
   // Initialize Idempotency Key
   useEffect(() => {
     setIdempotencyKey(crypto.randomUUID());
@@ -49,8 +54,21 @@ export default function POSPage() {
   const loadCatalog = async () => {
     setLoadingCatalog(true);
     try {
-      const data = await api.getCatalog();
-      setCatalog(data.catalog);
+      const [catData, recipesData] = await Promise.all([
+        api.getCatalog(),
+        api.listRecipes().catch(() => null)
+      ]);
+      setCatalog(catData.catalog);
+
+      if (recipesData?.recipes) {
+        const map: Record<string, boolean> = {};
+        recipesData.recipes.forEach((r: RecipeCoverageItemDTO) => {
+          if (r.menuItemId) {
+            map[r.menuItemId] = Boolean(r.hasActiveRecipe);
+          }
+        });
+        setRecipeCoverageMap(map);
+      }
     } catch (err: any) {
       showToast(err.message || 'Failed to load POS catalog', 'error');
     } finally {
@@ -135,6 +153,7 @@ export default function POSPage() {
     }
 
     setSubmitting(true);
+    setStockError(null);
     try {
       const keyToUse = idempotencyKey || crypto.randomUUID();
       if (!idempotencyKey) setIdempotencyKey(keyToUse);
@@ -158,7 +177,13 @@ export default function POSPage() {
       clearCart();
       setIdempotencyKey(crypto.randomUUID());
     } catch (err: any) {
-      showToast(err.message || 'Failed to complete transaction', 'error');
+      if (err?.code === 'INSUFFICIENT_STOCK') {
+        const safeMsg = 'Not enough stock for this order. Update stock or adjust the bill.';
+        setStockError(safeMsg);
+        showToast(safeMsg, 'error');
+      } else {
+        showToast(err.message || 'Failed to complete transaction', 'error');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -302,7 +327,18 @@ export default function POSPage() {
                           </span>
                         ) : null}
                       </div>
-                      <span className="text-[11px] text-slate-500 mt-1 block font-medium">{catName || 'General'}</span>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="text-[11px] text-slate-500 font-medium">{catName || 'General'}</span>
+                        <RecipeCoverageBadge
+                          status={
+                            !isAvail
+                              ? 'UNAVAILABLE'
+                              : recipeCoverageMap[item.id]
+                              ? 'COVERED'
+                              : 'RECIPE_MISSING'
+                          }
+                        />
+                      </div>
                     </div>
                     <div className="mt-2.5 flex justify-between items-center">
                       <span className="text-forest-800 font-extrabold text-sm">
@@ -513,6 +549,27 @@ export default function POSPage() {
               <span className="text-forest-800">{formatINR(previewTotal)}</span>
             </div>
           </div>
+
+          {/* Stock Rejection Error Banner */}
+          {stockError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-800">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-bold">{stockError}</p>
+                <p className="text-[11px] text-rose-700 mt-0.5">
+                  Your cart items have been kept intact. You can adjust quantities, update inventory stock, or try again.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStockError(null)}
+                className="text-rose-500 hover:text-rose-700 font-bold px-1"
+                aria-label="Dismiss error"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* Complete Order Button */}
           <Button

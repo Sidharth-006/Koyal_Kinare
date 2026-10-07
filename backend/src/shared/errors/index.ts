@@ -197,5 +197,11 @@ export class RecipeConflictError extends AppError {
   }
 }
 
+export class InsufficientDataForBreakEvenError extends AppError {
+  constructor(message: string = 'Insufficient data to calculate break-even. Configure a target gross margin rate.') {
+    super(message, 'INSUFFICIENT_DATA_FOR_BREAK_EVEN', 422);
+  }
+}
+
 
 

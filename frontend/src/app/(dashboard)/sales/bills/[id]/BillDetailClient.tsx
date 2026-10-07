@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { BillCostingSection } from '@/components/billing/BillCostingSection';
 
 export default function BillDetailPage() {
   const { showToast } = useToast();
@@ -250,6 +251,9 @@ export default function BillDetailPage() {
         </div>
       </Card>
 
+      {/* Phase 3 Module 3: Costing & Stock Impact Section */}
+      <BillCostingSection bill={bill} />
+
       {/* MANDATORY VOID BILL MODAL */}
       <Modal
         isOpen={showVoidModal}
@@ -257,10 +261,15 @@ export default function BillDetailPage() {
         title="Void Bill Confirmation"
       >
         <form onSubmit={handleVoidBill} className="space-y-4">
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
-            You are voiding Bill <strong>#{bNum}</strong> with grand total{' '}
-            <strong>{formatINR(gTotal)}</strong>.
-            This action will exclude the bill from sales reports while preserving payment history records.
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 space-y-1.5">
+            <p>
+              You are voiding Bill <strong>#{bNum}</strong> with grand total{' '}
+              <strong>{formatINR(gTotal)}</strong>.
+              This action will exclude the bill from sales reports while preserving payment history records.
+            </p>
+            <p className="font-semibold text-rose-900 border-t border-rose-200 pt-1.5">
+              ℹ️ This will return the recipe ingredients recorded for this bill to stock.
+            </p>
           </div>
 
           <Input

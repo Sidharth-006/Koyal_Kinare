@@ -162,7 +162,51 @@ export interface BillDTO {
   void_record?: BillVoidDTO | null;
   voidReason?: string | null;
   voidedAt?: string | null;
+  cost_coverage?: BillCostCoverageDTO | null;
+  costCoverage?: BillCostCoverageDTO | null;
+  consumptions?: BillConsumptionDTO[];
 }
+
+export interface BillConsumptionDTO {
+  id: string;
+  bill_id: string;
+  billId?: string;
+  bill_line_id: string;
+  billLineId?: string;
+  inventory_item_id: string;
+  inventoryItemId?: string;
+  recipe_version_id: string;
+  recipeVersionId?: string;
+  quantity_consumed: string;
+  quantityConsumed?: string;
+  unit_cost_snapshot: string | null;
+  unitCostSnapshot?: string | null;
+  total_cost_snapshot: string | null;
+  totalCostSnapshot?: string | null;
+  stock_movement_id: string;
+  stockMovementId?: string;
+  created_at: string;
+  createdAt?: string;
+}
+
+export interface BillCostCoverageDTO {
+  bill_id: string;
+  billId?: string;
+  total_bill_lines: number;
+  totalBillLines?: number;
+  covered_lines: number;
+  coveredLines?: number;
+  missing_recipe_lines: number;
+  missingRecipeLines?: number;
+  missing_cost_lines: number;
+  missingCostLines?: number;
+  negative_stock_override_used: boolean;
+  negativeStockOverrideUsed?: boolean;
+  created_at: string;
+  createdAt?: string;
+}
+
+export type RecipeCoverageStatus = 'COVERED' | 'RECIPE_MISSING' | 'UNAVAILABLE';
 
 export interface ExpenseDTO {
   id: string;

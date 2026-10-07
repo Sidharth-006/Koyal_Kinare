@@ -24,7 +24,7 @@ describe('RecipeRepository Integration Tests', () => {
     const catRes = await query(
       `
       INSERT INTO menu_categories (name, display_order)
-      VALUES ('TEST_Recipe_Cat', 999)
+      VALUES ('TEST_Recipe_Cat', -999)
       RETURNING id;
     `
     );

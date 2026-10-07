@@ -20,7 +20,8 @@ import {
   AttendanceSummaryResponseDTO, AttendanceReportParams,
   RecipeListParams, RecipeListResultDTO, MenuItemRecipeResponseDTO,
   RecipeVersionDetailDTO, CreateDraftPayload, UpdateDraftPayload,
-  ActivateVersionPayload, DeactivateVersionPayload
+  ActivateVersionPayload, DeactivateVersionPayload,
+  BillConsumptionDTO, BillCostCoverageDTO
 } from './types';
 
 /** Base URL for all API requests. Dynamically resolves from NEXT_PUBLIC_API_URL or environment host. */
@@ -97,7 +98,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     PURCHASE_NOT_REVERSIBLE: 'Only received purchases can be reversed.',
     SUPPLIER_INACTIVE: 'Selected supplier is inactive or archived.',
     INVENTORY_ITEM_ARCHIVED: 'One or more selected inventory items are archived.',
-    INSUFFICIENT_STOCK: 'This change would make stock negative. Review the current quantity.',
+    INSUFFICIENT_STOCK: 'Not enough stock for this order. Update stock or adjust the bill.',
     DUPLICATE_OPENING_STOCK: 'Opening stock has already been recorded for this item on the selected date.',
     DUPLICATE_MOVEMENT: 'A stock movement for this source reference has already been recorded.',
     IDEMPOTENCY_KEY_REUSED: 'This request was already submitted. Please refresh and check current state.',
@@ -188,7 +189,7 @@ export const api = {
   ): Promise<{ admin: AdminDTO }> => {
     const maxRetries = options?.maxRetries ?? 5;
     let delay = options?.retryDelayMs ?? 1500;
-    const timeoutMs = options?.timeoutMs ?? 12000;
+    const timeoutMs = options?.timeoutMs ?? 30000;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const controller = new AbortController();
@@ -311,6 +312,25 @@ export const api = {
     request<{ bill: BillDTO }>('/api/pos/bills/complete', { method: 'POST', body: JSON.stringify(payload) }, idempotencyKey),
   getBillById: (id: string) =>
     request<{ bill: BillDTO }>(`/api/bills/${id}`),
+  /**
+   * Explicit Contract Mapping:
+   * The DLD references GET /api/bills/:id/costing, but the frozen backend contract
+   * embeds cost_coverage and consumptions directly into GET /api/bills/:id.
+   * This method uses getBillById(id) and returns the server's authoritative
+   * costing payload without inventing unmapped routes or modifying backend code.
+   */
+  getBillCosting: async (billId: string): Promise<{
+    bill: BillDTO;
+    costCoverage: BillCostCoverageDTO | null;
+    consumptions: BillConsumptionDTO[];
+  }> => {
+    const res = await api.getBillById(billId);
+    return {
+      bill: res.bill,
+      costCoverage: res.bill.cost_coverage || res.bill.costCoverage || null,
+      consumptions: res.bill.consumptions || []
+    };
+  },
   listBills: (params: { startDate?: string; endDate?: string; status?: string }) => {
     const searchParams = new URLSearchParams();
     if (params.startDate) searchParams.set('startDate', params.startDate);
@@ -319,8 +339,8 @@ export const api = {
     const queryStr = searchParams.toString();
     return request<{ bills: BillDTO[] }>(`/api/pos/bills${queryStr ? `?${queryStr}` : ''}`);
   },
-  voidBill: (id: string, voidReason: string) =>
-    request<{ bill: BillDTO }>(`/api/bills/${id}/void`, { method: 'POST', body: JSON.stringify({ voidReason }) }),
+  voidBill: (id: string, voidReason: string, idempotencyKey?: string) =>
+    request<{ bill: BillDTO }>(`/api/bills/${id}/void`, { method: 'POST', body: JSON.stringify({ voidReason }) }, idempotencyKey),
 
   // Expenses
   listExpenses: (params: { startDate?: string; endDate?: string; category?: string; paymentMethod?: string; includeVoided?: boolean }) => {

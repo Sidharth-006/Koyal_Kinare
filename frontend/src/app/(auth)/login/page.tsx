@@ -217,7 +217,11 @@ export default function LoginPage() {
                     name="email"
                     placeholder="admin@koyalkinare.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+                      if (generalError) setGeneralError(null);
+                    }}
                     disabled={isLoading}
                     autoComplete="email"
                     autoFocus
@@ -244,7 +248,11 @@ export default function LoginPage() {
                     name="password"
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+                      if (generalError) setGeneralError(null);
+                    }}
                     disabled={isLoading}
                     autoComplete="current-password"
                     className="w-full pl-11 pr-12 py-3.5 bg-[#E8E2D5] border border-[#DDD5C7] rounded-xl text-[#1C3026] placeholder-[#8C857B] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1C3026]/40 focus:border-[#1C3026] focus:bg-[#FAF7F2] transition-all min-h-[48px]"
