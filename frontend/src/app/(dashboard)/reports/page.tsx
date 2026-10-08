@@ -13,8 +13,9 @@ import { Badge } from '@/components/ui/Badge';
 import {
   BarChart3, ShoppingBag, Receipt, Scale, Download, FileText,
   Package, History, ShoppingCart, Truck, Trash2, TrendingUp,
-  AlertCircle
+  AlertCircle, Eye
 } from 'lucide-react';
+import { ReportPreviewModal, ReportTypeKey } from '@/components/reports/ReportPreviewModal';
 
 interface ReportConfig {
   id: string;
@@ -23,9 +24,59 @@ interface ReportConfig {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   isEstimate?: boolean;
+  isPhase3?: boolean;
 }
 
 const ALL_REPORTS: ReportConfig[] = [
+  // Phase 3 Advanced CA & P&L Reports
+  {
+    id: 'SALES_REGISTER',
+    category: 'FINANCIAL',
+    title: 'Sales Register (GST / CA)',
+    description: 'Itemized tax-audited sales register with invoice subtotal, tax rate snapshots, and payment channels',
+    icon: ShoppingBag,
+    isPhase3: true
+  },
+  {
+    id: 'PURCHASE_REGISTER',
+    category: 'FINANCIAL',
+    title: 'Purchase Register (GST / CA)',
+    description: 'Vendor procurement register with invoice references, GST tax amounts, and payment breakdown',
+    icon: ShoppingCart,
+    isPhase3: true
+  },
+  {
+    id: 'EXPENSE_REGISTER',
+    category: 'FINANCIAL',
+    title: 'Expense Register (GST / CA)',
+    description: 'Itemized operational expenses by category with tax deductions and payment audit records',
+    icon: Receipt,
+    isPhase3: true
+  },
+  {
+    id: 'MONTHLY_PNL',
+    category: 'PROFITABILITY',
+    title: 'Monthly Grouped P&L Report',
+    description: 'Multi-month income and food cost reconciliation comparing monthly revenues, costs, and margins',
+    icon: TrendingUp,
+    isPhase3: true
+  },
+  {
+    id: 'INVENTORY_VALUATION',
+    category: 'INVENTORY',
+    title: 'Inventory Valuation Report',
+    description: 'Current inventory valuation based on moving-average costs with schema limitation disclosure',
+    icon: Package,
+    isPhase3: true
+  },
+  {
+    id: 'RECONCILIATION',
+    category: 'FINANCIAL',
+    title: 'Daily Closing & Reconciliation Register',
+    description: 'Multi-day audit register of opening floats, actual cash counts, variance, and digital settlements',
+    icon: Scale,
+    isPhase3: true
+  },
   // Phase 1 Reports
   {
     id: 'DAILY_SUMMARY',
@@ -128,6 +179,7 @@ export default function ReportsPage() {
   // Export Loading States
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
 
   useEffect(() => {
     // Load active inventory items and suppliers for report filters
@@ -151,7 +203,7 @@ export default function ReportsPage() {
   }, []);
 
   const handleExport = async (fileFormat: 'XLSX' | 'PDF') => {
-    const isAsOfOnly = selectedReport === 'INVENTORY_STOCK';
+    const isAsOfOnly = selectedReport === 'INVENTORY_STOCK' || selectedReport === 'INVENTORY_VALUATION';
 
     if (!isAsOfOnly) {
       if (!startDate || !endDate) {
@@ -176,7 +228,19 @@ export default function ReportsPage() {
       let res: any;
       let filenamePrefix = selectedReport.toLowerCase().replace(/_/g, '-');
 
-      if (selectedReport === 'INVENTORY_STOCK') {
+      if (selectedReport === 'SALES_REGISTER') {
+        res = await api.exportSalesRegister(startDate, endDate, fileFormat);
+      } else if (selectedReport === 'PURCHASE_REGISTER') {
+        res = await api.exportPurchaseRegister(startDate, endDate, fileFormat);
+      } else if (selectedReport === 'EXPENSE_REGISTER') {
+        res = await api.exportExpenseRegister(startDate, endDate, fileFormat);
+      } else if (selectedReport === 'MONTHLY_PNL') {
+        res = await api.exportMonthlyPnl(startDate, endDate, fileFormat);
+      } else if (selectedReport === 'INVENTORY_VALUATION') {
+        res = await api.exportInventoryValuationReport(asOfDate, fileFormat);
+      } else if (selectedReport === 'RECONCILIATION') {
+        res = await api.exportReconciliationRangeReport(startDate, endDate, fileFormat);
+      } else if (selectedReport === 'INVENTORY_STOCK') {
         res = await api.getInventoryStockReport({
           asOf: asOfDate,
           format: fileFormat
@@ -312,7 +376,23 @@ export default function ReportsPage() {
           {selectedReportConfig?.isEstimate && (
             <Badge variant="warning">Phase 2 Estimate</Badge>
           )}
+          {selectedReportConfig?.isPhase3 && (
+            <Badge variant="success">Phase 3 CA Grade</Badge>
+          )}
         </div>
+
+        {/* Inventory Valuation Schema Limitation Notice */}
+        {selectedReport === 'INVENTORY_VALUATION' && (
+          <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Inventory Valuation Schema Limitation</p>
+              <p className="mt-0.5 leading-relaxed text-amber-800">
+                Valuation reflects the current weighted-average cost state in the database. Historical point-in-time snapshot is not supported by the existing schema. The as-of date is recorded in the export audit trail.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Profitability Notice */}
         {selectedReport === 'PROFITABILITY' && (
@@ -329,7 +409,7 @@ export default function ReportsPage() {
 
         {/* Dynamic Filters Form */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {selectedReport === 'INVENTORY_STOCK' ? (
+          {selectedReport === 'INVENTORY_STOCK' || selectedReport === 'INVENTORY_VALUATION' ? (
             /* As-Of Date Filter */
             <div className="sm:col-span-2 lg:col-span-3">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
@@ -469,8 +549,20 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* Step 3: Trigger Supported Exports (XLSX & PDF ONLY) */}
-        <div className="pt-4 border-t border-border flex flex-col sm:flex-row gap-3 justify-end">
+        {/* Step 3: Trigger Supported Exports (XLSX & PDF ONLY) and Preview */}
+        <div className="pt-4 border-t border-border flex flex-col sm:flex-row gap-3 justify-end items-stretch sm:items-center">
+          {selectedReportConfig?.isPhase3 && (
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => setPreviewModalOpen(true)}
+              className="flex-1 sm:flex-none justify-center border-forest-700/30 text-forest-800 font-bold hover:bg-forest-50"
+              icon={<Eye className="w-4 h-4 text-forest-800" />}
+            >
+              Preview Report Data
+            </Button>
+          )}
+
           <Button
             variant="secondary"
             size="lg"
@@ -496,6 +588,21 @@ export default function ReportsPage() {
           </Button>
         </div>
       </Card>
+
+      {/* Phase 3 Human-Readable Formatted Preview Modal */}
+      {previewModalOpen && selectedReportConfig?.isPhase3 && (
+        <ReportPreviewModal
+          isOpen={previewModalOpen}
+          onClose={() => setPreviewModalOpen(false)}
+          reportType={selectedReport as ReportTypeKey}
+          reportTitle={selectedReportConfig.title}
+          from={startDate}
+          to={endDate}
+          asOf={asOfDate}
+          onExport={handleExport}
+          isExporting={exportingExcel || exportingPdf}
+        />
+      )}
     </div>
   );
 }

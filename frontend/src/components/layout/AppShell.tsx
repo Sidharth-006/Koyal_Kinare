@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Receipt, SlidersHorizontal,
   BarChart3, FileText, Settings, LogOut, Coffee, Calendar, User, Menu as MenuIcon, X, Sparkles, Package, Truck, ShoppingCart, History,
-  Users, UserCheck, BookOpen
+  Users, UserCheck, BookOpen, TrendingUp, PieChart
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api } from '@/lib/api';
@@ -53,6 +53,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
     { href: '/staff', label: 'Staff', icon: Users },
     { href: '/attendance', label: 'Attendance', icon: UserCheck },
     { href: '/reconciliation', label: 'Daily Closing', icon: SlidersHorizontal },
+    { href: '/profitability', label: 'Profitability', icon: TrendingUp },
+    { href: '/analytics', label: 'Analytics', icon: PieChart },
     { href: '/sales', label: 'Sales', icon: BarChart3 },
     { href: '/reports', label: 'Reports', icon: FileText },
     { href: '/settings', label: 'Settings', icon: Settings },

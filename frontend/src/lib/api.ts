@@ -21,7 +21,10 @@ import {
   RecipeListParams, RecipeListResultDTO, MenuItemRecipeResponseDTO,
   RecipeVersionDetailDTO, CreateDraftPayload, UpdateDraftPayload,
   ActivateVersionPayload, DeactivateVersionPayload,
-  BillConsumptionDTO, BillCostCoverageDTO
+  BillConsumptionDTO, BillCostCoverageDTO,
+  PnlResult, AnalyticsOverviewResult, MenuPerformanceResult,
+  SalesRegisterResult, PurchaseRegisterResult, ExpenseRegisterResult,
+  MonthlyPnlResult, InventoryValuationResult, ReconciliationRangeResult
 } from './types';
 
 /** Base URL for all API requests. Dynamically resolves from NEXT_PUBLIC_API_URL or environment host. */
@@ -703,7 +706,57 @@ export const api = {
     request<{ message: string; versionId: string; recipeId: string; status: string }>(`/api/recipe-versions/${encodeURIComponent(versionId)}/deactivate`, {
       method: 'POST',
       body: JSON.stringify(payload)
-    }, idempotencyKey)
+    }, idempotencyKey),
+
+  // Phase 3 Module 4 — P&L, Analytics, and CA Reports
+  getPnl: (from: string, to: string) =>
+    request<PnlResult>(`/api/pnl?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
+  getAnalyticsOverview: (from: string, to: string) =>
+    request<AnalyticsOverviewResult>(`/api/analytics/overview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
+  getMenuPerformance: (from: string, to: string, sort?: string) =>
+    request<MenuPerformanceResult>(
+      `/api/analytics/menu-performance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${sort ? `&sort=${encodeURIComponent(sort)}` : ''}`
+    ),
+
+  getSalesRegister: (from: string, to: string) =>
+    request<SalesRegisterResult>(`/api/reports/sales-register?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
+  exportSalesRegister: (from: string, to: string, format: 'XLSX' | 'PDF') =>
+    request<ExportResultDTO>(`/api/reports/sales-register?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&format=${encodeURIComponent(format)}`),
+
+  getPurchaseRegister: (from: string, to: string) =>
+    request<PurchaseRegisterResult>(`/api/reports/purchase-register?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
+  exportPurchaseRegister: (from: string, to: string, format: 'XLSX' | 'PDF') =>
+    request<ExportResultDTO>(`/api/reports/purchase-register?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&format=${encodeURIComponent(format)}`),
+
+  getExpenseRegister: (from: string, to: string) =>
+    request<ExpenseRegisterResult>(`/api/reports/expense-register?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
+  exportExpenseRegister: (from: string, to: string, format: 'XLSX' | 'PDF') =>
+    request<ExportResultDTO>(`/api/reports/expense-register?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&format=${encodeURIComponent(format)}`),
+
+  getMonthlyPnl: (from: string, to: string) =>
+    request<MonthlyPnlResult>(`/api/reports/monthly-pnl?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
+  exportMonthlyPnl: (from: string, to: string, format: 'XLSX' | 'PDF') =>
+    request<ExportResultDTO>(`/api/reports/monthly-pnl?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&format=${encodeURIComponent(format)}`),
+
+  getInventoryValuationReport: (asOf?: string) =>
+    request<InventoryValuationResult>(`/api/reports/inventory-valuation${asOf ? `?asOf=${encodeURIComponent(asOf)}` : ''}`),
+
+  exportInventoryValuationReport: (asOf: string | undefined, format: 'XLSX' | 'PDF') =>
+    request<ExportResultDTO>(
+      `/api/reports/inventory-valuation?format=${encodeURIComponent(format)}${asOf ? `&asOf=${encodeURIComponent(asOf)}` : ''}`
+    ),
+
+  getReconciliationRangeReport: (from: string, to: string) =>
+    request<ReconciliationRangeResult>(`/api/reports/reconciliation?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
+  exportReconciliationRangeReport: (from: string, to: string, format: 'XLSX' | 'PDF') =>
+    request<ExportResultDTO>(`/api/reports/reconciliation?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&format=${encodeURIComponent(format)}`)
 };
 
 export function downloadExportFile(exportData: ExportResultDTO, filename: string) {
