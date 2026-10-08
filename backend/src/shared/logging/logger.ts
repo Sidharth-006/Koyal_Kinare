@@ -9,7 +9,29 @@ export const logger = pino({
   },
   timestamp: pino.stdTimeFunctions.isoTime,
   redact: {
-    paths: ['password', 'password_hash', 'token', 'token_hash', 'cookie', 'headers.authorization', 'headers.cookie', 'phone', 'email', 'contactPerson', 'contact_person', 'gstin', 'salaryReference', 'salary_reference', 'emergencyContact', 'emergency_contact'],
+    paths: [
+      'password',
+      'password_hash',
+      'token',
+      'token_hash',
+      'cookie',
+      'headers.authorization',
+      'headers.cookie',
+      'phone',
+      'email',
+      'contactPerson',
+      'contact_person',
+      'gstin',
+      'salaryReference',
+      'salary_reference',
+      'emergencyContact',
+      'emergency_contact',
+      'backup_reference',
+      'backupReference',
+      'user_agent_hash',
+      'last_ip_hash',
+      'rawToken'
+    ],
     censor: '[REDACTED]'
   }
 });

@@ -8,7 +8,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const admin = await requireAdmin(req);
     const body = await req.json().catch(() => ({}));
     const idempotencyKey = req.headers.get('idempotency-key') || req.headers.get('Idempotency-Key') || undefined;
-    const updatedBill = await BillingService.voidBill(params.id, body.voidReason, admin.id, idempotencyKey);
+    const expectedRevision = req.headers.get('if-match') || req.headers.get('x-expected-revision') || body.expectedRevision || undefined;
+    const updatedBill = await BillingService.voidBill(params.id, body.voidReason, admin.id, idempotencyKey, undefined, expectedRevision);
     return successResponse({ bill: updatedBill });
   } catch (err) {
     return errorResponse(err);

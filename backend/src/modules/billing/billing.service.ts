@@ -8,6 +8,7 @@ import { getTodayDateString } from '@/shared/time';
 import { ValidationError, NotFoundError, ConflictError } from '@/shared/errors';
 import { IdempotencyRepository } from '../audit/idempotency.repository';
 import { CostingService } from './costing.service';
+import { RevisionService } from '../settings/revision.service';
 
 export interface CreateBillItemInput {
   menuItemId: string;
@@ -24,6 +25,7 @@ export class BillingService {
       paymentMethod: 'CASH' | 'UPI' | 'CARD';
       businessDate?: string;
       idempotencyKey?: string;
+      expectedRevision?: number | string;
     },
     adminId: string,
     requestId?: string
@@ -62,6 +64,10 @@ export class BillingService {
 
     // Execute atomic bill completion in a single DB transaction
     const result = await withTransaction(async (client) => {
+      if (params.expectedRevision !== undefined && params.expectedRevision !== null) {
+        await RevisionService.verifyRevision('bill', params.expectedRevision, client, adminId, requestId);
+      }
+
       let rawSubtotal = '0.00';
       const processedLines: any[] = [];
 
@@ -201,6 +207,9 @@ export class BillingService {
         );
       }
 
+      // Phase 3 Module 5: Increment atomic revision for bill domain
+      await RevisionService.bumpRevision('bill', client);
+
       return fullBill;
     });
 
@@ -212,7 +221,8 @@ export class BillingService {
     voidReason: string,
     adminId: string,
     idempotencyKey?: string,
-    requestId?: string
+    requestId?: string,
+    expectedRevision?: number | string
   ) {
     if (!voidReason || voidReason.trim().length === 0) {
       throw new ValidationError('Mandatory void reason is required.');
@@ -236,6 +246,10 @@ export class BillingService {
     }
 
     return withTransaction(async (client) => {
+      if (expectedRevision !== undefined && expectedRevision !== null) {
+        await RevisionService.verifyRevision('bill', expectedRevision, client, adminId, requestId);
+      }
+
       // Step B: Lock bill row FOR UPDATE and verify status
       const { rows } = await client.query('SELECT * FROM bills WHERE id = $1 FOR UPDATE;', [billId]);
       const bill = rows[0];
@@ -290,6 +304,9 @@ export class BillingService {
           client
         );
       }
+
+      // Phase 3 Module 5: Increment atomic revision for bill domain
+      await RevisionService.bumpRevision('bill', client);
 
       return updatedBill;
     });

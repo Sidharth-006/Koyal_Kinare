@@ -16,6 +16,7 @@ import { StockLedgerService } from '../stock/stock.service';
 import { CostingService } from '../billing/costing.service';
 import { AuditService } from '../audit/audit.service';
 import { IdempotencyRepository } from '../audit/idempotency.repository';
+import { RevisionService } from '../settings/revision.service';
 import {
   ValidationError,
   NotFoundError,
@@ -197,6 +198,9 @@ export class PurchaseService {
         client
       );
 
+      // Phase 3 Module 5: Increment atomic revision for purchase domain
+      await RevisionService.bumpRevision('purchase', client);
+
       return result;
     });
   }
@@ -307,6 +311,9 @@ export class PurchaseService {
         client
       );
 
+      // Phase 3 Module 5: Increment atomic revision for purchase domain
+      await RevisionService.bumpRevision('purchase', client);
+
       return result;
     });
   }
@@ -416,6 +423,9 @@ export class PurchaseService {
         result,
         client
       );
+
+      // Phase 3 Module 5: Increment atomic revision for purchase domain
+      await RevisionService.bumpRevision('purchase', client);
 
       return result;
     });
@@ -529,6 +539,9 @@ export class PurchaseService {
         result,
         client
       );
+
+      // Phase 3 Module 5: Increment atomic revision for purchase domain
+      await RevisionService.bumpRevision('purchase', client);
 
       return result;
     });

@@ -4,6 +4,7 @@ import { MenuRepository } from '../menu/menu.repository';
 import { InventoryRepository } from '../inventory/inventory.repository';
 import { AuditService } from '../audit/audit.service';
 import { IdempotencyRepository } from '../audit/idempotency.repository';
+import { RevisionService } from '../settings/revision.service';
 import { withTransaction } from '@/shared/database/client';
 import {
   createDraftSchema,
@@ -247,6 +248,8 @@ export class RecipeService {
         client
       );
 
+      await RevisionService.bumpRevision('recipe', client);
+
       return formatRecipeVersionDetailDTO(version, insertedIngredients);
     });
   }
@@ -349,6 +352,8 @@ export class RecipeService {
         },
         client
       );
+
+      await RevisionService.bumpRevision('recipe', client);
 
       return formatRecipeVersionDetailDTO(updatedVersion, insertedIngredients);
     });
@@ -514,6 +519,8 @@ export class RecipeService {
         );
       }
 
+      await RevisionService.bumpRevision('recipe', client);
+
       return responseDTO;
     });
 
@@ -634,6 +641,8 @@ export class RecipeService {
           client
         );
       }
+
+      await RevisionService.bumpRevision('recipe', client);
 
       return responseBody;
     });

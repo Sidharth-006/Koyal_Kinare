@@ -14,6 +14,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { IdempotencyRepository } from '../audit/idempotency.repository';
 import { InventoryRepository } from '../inventory/inventory.repository';
+import { RevisionService } from '../settings/revision.service';
 import { StockRepository } from './stock.repository';
 import {
   StockMovement,
@@ -216,6 +217,8 @@ export class StockLedgerService {
         );
       }
 
+      await RevisionService.bumpRevision('stock', client);
+
       return responsePayload;
     });
 
@@ -308,6 +311,8 @@ export class StockLedgerService {
           client
         );
       }
+
+      await RevisionService.bumpRevision('stock', client);
 
       return responsePayload;
     });
@@ -416,6 +421,8 @@ export class StockLedgerService {
         );
       }
 
+      await RevisionService.bumpRevision('stock', client);
+
       return responsePayload;
     });
 
@@ -457,6 +464,8 @@ export class StockLedgerService {
       client
     );
 
+    await RevisionService.bumpRevision('stock', client);
+
     return {
       movementId: movement.id,
       inventoryItemId: input.inventoryItemId,
@@ -497,6 +506,8 @@ export class StockLedgerService {
       },
       client
     );
+
+    await RevisionService.bumpRevision('stock', client);
 
     return {
       movementId: movement.id,

@@ -1,5 +1,6 @@
 import { SettingsRepository } from './settings.repository';
 import { AuditService } from '../audit/audit.service';
+import { RevisionService } from './revision.service';
 
 export class SettingsService {
   static async getBusinessSettings() {
@@ -18,6 +19,7 @@ export class SettingsService {
       beforeState: before,
       afterState: updated
     });
+    await RevisionService.bumpRevision('settings');
     return updated;
   }
 
@@ -37,6 +39,7 @@ export class SettingsService {
       beforeState: before,
       afterState: updated
     });
+    await RevisionService.bumpRevision('settings');
     return updated;
   }
 
@@ -56,6 +59,7 @@ export class SettingsService {
       beforeState: before,
       afterState: updated
     });
+    await RevisionService.bumpRevision('settings');
     return updated;
   }
 }

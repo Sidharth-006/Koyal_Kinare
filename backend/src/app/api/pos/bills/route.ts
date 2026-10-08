@@ -27,9 +27,10 @@ export async function POST(req: NextRequest) {
     const admin = await requireAdmin(req);
     const body = await req.json().catch(() => ({}));
     const idempotencyKey = req.headers.get('idempotency-key') || req.headers.get('x-idempotency-key') || undefined;
+    const expectedRevision = req.headers.get('if-match') || req.headers.get('x-expected-revision') || body.expectedRevision || undefined;
 
     const bill = await BillingService.completeBill(
-      { ...body, idempotencyKey },
+      { ...body, idempotencyKey, expectedRevision },
       admin.id
     );
     return successResponse({ bill }, 201);

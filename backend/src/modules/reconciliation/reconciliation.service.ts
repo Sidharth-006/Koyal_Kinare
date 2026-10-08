@@ -1,5 +1,6 @@
 import { ReconciliationRepository } from './reconciliation.repository';
 import { AuditService } from '../audit/audit.service';
+import { RevisionService } from '../settings/revision.service';
 import { addMoney, subtractMoney, toDecimal } from '@/shared/money/decimal';
 import { getTodayDateString } from '@/shared/time';
 import { ValidationError } from '@/shared/errors';
@@ -20,6 +21,8 @@ export class ReconciliationService {
       requestId,
       afterState: opening
     });
+
+    await RevisionService.bumpRevision('reconciliation');
 
     return opening;
   }
@@ -163,6 +166,8 @@ export class ReconciliationService {
       afterState: settlement
     });
 
+    await RevisionService.bumpRevision('reconciliation');
+
     return settlement;
   }
 
@@ -242,6 +247,8 @@ export class ReconciliationService {
       requestId,
       afterState: closing
     });
+
+    await RevisionService.bumpRevision('reconciliation');
 
     return closing;
   }
