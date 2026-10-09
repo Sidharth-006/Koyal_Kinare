@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import {
   PurchaseDTO,
@@ -43,11 +43,37 @@ import {
   Info
 } from 'lucide-react';
 
-export default function PurchaseDetailPage() {
+function PurchaseDetailPageInner({ purchaseIdProp }: { purchaseIdProp?: string }) {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { showToast } = useToast();
-  const purchaseId = typeof params.id === 'string' ? params.id : '';
+
+  const [resolvedId, setResolvedId] = useState<string>(() => {
+    if (purchaseIdProp) return purchaseIdProp;
+    if (params?.id && params.id !== 'placeholder') return params.id as string;
+    if (searchParams?.get('id')) return searchParams.get('id') as string;
+    if (searchParams?.get('purchaseId')) return searchParams.get('purchaseId') as string;
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get('id') || sp.get('purchaseId') || '';
+    }
+    return '';
+  });
+
+  useEffect(() => {
+    const nextId =
+      purchaseIdProp ||
+      (params?.id && params.id !== 'placeholder' ? (params.id as string) : '') ||
+      searchParams?.get('id') ||
+      searchParams?.get('purchaseId') ||
+      (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') || new URLSearchParams(window.location.search).get('purchaseId') || '' : '');
+    if (nextId && nextId !== resolvedId) {
+      setResolvedId(nextId);
+    }
+  }, [params, searchParams, purchaseIdProp, resolvedId]);
+
+  const purchaseId = resolvedId;
 
   // Purchase State
   const [purchase, setPurchase] = useState<PurchaseDTO | null>(null);
@@ -81,7 +107,10 @@ export default function PurchaseDetailPage() {
 
   // Load Purchase Detail
   const loadPurchase = useCallback(async () => {
-    if (!purchaseId) return;
+    if (!purchaseId || purchaseId === 'placeholder') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -126,8 +155,12 @@ export default function PurchaseDetailPage() {
   }, [purchaseId]);
 
   useEffect(() => {
-    loadPurchase();
-  }, [loadPurchase]);
+    if (purchaseId && purchaseId !== 'placeholder') {
+      loadPurchase();
+    } else {
+      setLoading(false);
+    }
+  }, [purchaseId, loadPurchase]);
 
   // Load Reference Data if editing
   useEffect(() => {
@@ -224,6 +257,24 @@ export default function PurchaseDetailPage() {
         <Skeleton className="h-10 w-48 rounded-xl" />
         <Skeleton className="h-44 w-full rounded-2xl" />
         <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!purchaseId || purchaseId === 'placeholder') {
+    return (
+      <div className="max-w-xl mx-auto p-8 text-center space-y-4">
+        <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
+        <h2 className="text-lg font-bold text-slate-800">Select a Purchase</h2>
+        <p className="text-xs text-slate-600">Please choose a purchase from the purchase list to view its details.</p>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => router.push('/purchases')}
+          icon={<ArrowLeft className="w-4 h-4" />}
+        >
+          Back to Purchases
+        </Button>
       </div>
     );
   }
@@ -683,3 +734,20 @@ export default function PurchaseDetailPage() {
     </div>
   );
 }
+
+export default function PurchaseDetailPage(props: { purchaseIdProp?: string }) {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+          <Skeleton className="h-10 w-48 rounded-xl" />
+          <Skeleton className="h-44 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      }
+    >
+      <PurchaseDetailPageInner {...props} />
+    </React.Suspense>
+  );
+}
+

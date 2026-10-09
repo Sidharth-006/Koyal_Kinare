@@ -322,7 +322,7 @@ export default function PurchasesListPage() {
                   return (
                     <tr
                       key={purchase.id}
-                      onClick={() => router.push(`/purchases/${purchase.id}`)}
+                      onClick={() => router.push(`/purchases/view?id=${purchase.id}`)}
                       className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
                     >
                       <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
@@ -347,7 +347,7 @@ export default function PurchasesListPage() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <Link
-                          href={`/purchases/${purchase.id}`}
+                          href={`/purchases/view?id=${purchase.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="inline-flex items-center gap-1 text-xs font-semibold text-forest-700 hover:text-forest-900 group-hover:underline"
                         >
@@ -374,7 +374,7 @@ export default function PurchasesListPage() {
               return (
                 <div
                   key={purchase.id}
-                  onClick={() => router.push(`/purchases/${purchase.id}`)}
+                  onClick={() => router.push(`/purchases/view?id=${purchase.id}`)}
                   className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-3 cursor-pointer active:scale-[0.99] transition-transform"
                 >
                   <div className="flex items-center justify-between">

@@ -247,7 +247,7 @@ export default function NewPurchasePage() {
       }
 
       showToast('Purchase draft created successfully', 'success');
-      router.push(`/purchases/${createdPurchase.id}`);
+      router.push(`/purchases/view?id=${createdPurchase.id}`);
     } catch (err: any) {
       setIsSubmitting(false);
       setGeneralError(err.message || 'Failed to save purchase draft.');
