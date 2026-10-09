@@ -29,12 +29,39 @@ import {
   UtensilsCrossed,
   ShieldAlert
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
-export default function MenuItemRecipeClient() {
+function MenuItemRecipeClientInner({ menuItemIdProp }: { menuItemIdProp?: string }) {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { showToast } = useToast();
-  const menuItemId = params?.id as string;
+
+  const [resolvedId, setResolvedId] = useState<string>(() => {
+    if (menuItemIdProp) return menuItemIdProp;
+    if (params?.id && params.id !== 'placeholder') return params.id as string;
+    if (searchParams?.get('id')) return searchParams.get('id') as string;
+    if (searchParams?.get('menuItemId')) return searchParams.get('menuItemId') as string;
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get('id') || sp.get('menuItemId') || '';
+    }
+    return '';
+  });
+
+  useEffect(() => {
+    const nextId =
+      menuItemIdProp ||
+      (params?.id && params.id !== 'placeholder' ? (params.id as string) : '') ||
+      searchParams?.get('id') ||
+      searchParams?.get('menuItemId') ||
+      (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') || new URLSearchParams(window.location.search).get('menuItemId') || '' : '');
+    if (nextId && nextId !== resolvedId) {
+      setResolvedId(nextId);
+    }
+  }, [params, searchParams, menuItemIdProp, resolvedId]);
+
+  const menuItemId = resolvedId;
 
   // Recipe detail data state
   const [data, setData] = useState<MenuItemRecipeResponseDTO | null>(null);
@@ -50,7 +77,10 @@ export default function MenuItemRecipeClient() {
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   const loadRecipeData = async () => {
-    if (!menuItemId || menuItemId === 'placeholder') return;
+    if (!menuItemId || menuItemId === 'placeholder') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -77,7 +107,9 @@ export default function MenuItemRecipeClient() {
   };
 
   useEffect(() => {
-    loadRecipeData();
+    if (menuItemId && menuItemId !== 'placeholder') {
+      loadRecipeData();
+    }
   }, [menuItemId]);
 
   const handleMutationSuccess = () => {
@@ -93,6 +125,30 @@ export default function MenuItemRecipeClient() {
         </div>
         <Skeleton className="h-40 w-full rounded-2xl" />
         <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!menuItemId || menuItemId === 'placeholder') {
+    return (
+      <div className="space-y-6 font-sans" data-testid="recipe-detail-empty">
+        <Link
+          href="/recipes"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 min-h-[44px]"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Recipe Coverage</span>
+        </Link>
+        <Card className="p-8 text-center space-y-3">
+          <UtensilsCrossed className="w-10 h-10 text-slate-400 mx-auto" />
+          <h3 className="font-bold text-slate-800 text-base">Select a Menu Item</h3>
+          <p className="text-xs text-slate-600 max-w-sm mx-auto">Please choose a menu item from the Recipe Coverage list to configure its recipe.</p>
+          <div className="pt-2">
+            <Button variant="primary" size="sm" onClick={() => router.push('/recipes')} className="min-h-[44px]">
+              Go to Recipe Coverage
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -376,5 +432,21 @@ export default function MenuItemRecipeClient() {
         />
       )}
     </div>
+  );
+}
+
+export default function MenuItemRecipeClient(props: { menuItemIdProp?: string }) {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="space-y-6 font-sans p-4">
+          <Skeleton className="h-10 w-48 rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      }
+    >
+      <MenuItemRecipeClientInner {...props} />
+    </React.Suspense>
   );
 }

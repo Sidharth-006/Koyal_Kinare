@@ -204,7 +204,7 @@ export default function RecipeCoveragePage() {
                 {recipes.map((row) => (
                   <tr
                     key={row.menuItemId}
-                    onClick={() => router.push(`/menu/${row.menuItemId}/recipe`)}
+                    onClick={() => router.push(`/recipes/configure?id=${row.menuItemId}`)}
                     className="hover:bg-cream-50/60 transition-colors cursor-pointer"
                     data-testid={`recipe-row-${row.menuItemId}`}
                   >
@@ -232,7 +232,7 @@ export default function RecipeCoveragePage() {
                     </td>
                     <td className="p-4 text-right">
                       <Link
-                        href={`/menu/${row.menuItemId}/recipe`}
+                        href={`/recipes/configure?id=${row.menuItemId}`}
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-1 text-xs font-bold text-forest-800 hover:text-forest-900 hover:underline px-3 py-2 rounded-lg hover:bg-cream-100/70 min-h-[44px]"
                         data-testid={`manage-recipe-link-${row.menuItemId}`}
@@ -252,7 +252,7 @@ export default function RecipeCoveragePage() {
             {recipes.map((row) => (
               <div
                 key={row.menuItemId}
-                onClick={() => router.push(`/menu/${row.menuItemId}/recipe`)}
+                onClick={() => router.push(`/recipes/configure?id=${row.menuItemId}`)}
                 className="p-4 bg-white rounded-2xl border border-border shadow-2xs space-y-3 active:bg-cream-50/50 transition-colors cursor-pointer"
                 data-testid={`recipe-mobile-card-${row.menuItemId}`}
               >
