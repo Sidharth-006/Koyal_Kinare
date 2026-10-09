@@ -36,6 +36,7 @@ export const PhysicalCountModal: React.FC<PhysicalCountModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [operationKey, setOperationKey] = useState<string | null>(null);
 
   const generateFreshIdempotencyKey = () => {
     if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
@@ -94,7 +95,8 @@ export const PhysicalCountModal: React.FC<PhysicalCountModalProps> = ({
     if (isSubmitting || isArchived) return;
 
     setIsSubmitting(true);
-    const idempotencyKey = generateFreshIdempotencyKey();
+    const keyToUse = operationKey || generateFreshIdempotencyKey();
+    if (!operationKey) setOperationKey(keyToUse);
 
     try {
       const res = await api.recordStockCount(
@@ -104,26 +106,39 @@ export const PhysicalCountModal: React.FC<PhysicalCountModalProps> = ({
           businessDate,
           reason: reason.trim() ? reason.trim() : undefined
         },
-        idempotencyKey
+        keyToUse
       );
 
       setIsSubmitting(false);
+      setOperationKey(null);
       onSuccess(res.resultingBalance, res.movementCreated);
       onClose();
     } catch (err: unknown) {
       setIsSubmitting(false);
       if (err instanceof ApiError) {
-        setGeneralError(err.message || 'Failed to record physical count.');
+        if (err.statusCode === 0 || err.code === 'NETWORK_ERROR' || err.code === 'TIMEOUT_ERROR') {
+          setGeneralError('Network connection interrupted. The operation key is preserved — retry safely.');
+        } else {
+          setGeneralError(err.message || 'Failed to record physical count.');
+        }
       } else {
         setGeneralError('An unexpected error occurred while recording physical count.');
       }
     }
   };
 
+  const handleCancel = () => {
+    if (isSubmitting) return;
+    setOperationKey(null);
+    setGeneralError(null);
+    setFieldErrors({});
+    onClose();
+  };
+
   return (
     <Modal
       isOpen={isOpen}
-      onClose={isSubmitting ? () => {} : onClose}
+      onClose={handleCancel}
       title="Record Physical Stock Count"
       size="md"
     >
@@ -318,7 +333,7 @@ export const PhysicalCountModal: React.FC<PhysicalCountModalProps> = ({
           <Button
             type="button"
             variant="secondary"
-            onClick={onClose}
+            onClick={handleCancel}
             disabled={isSubmitting}
           >
             Cancel

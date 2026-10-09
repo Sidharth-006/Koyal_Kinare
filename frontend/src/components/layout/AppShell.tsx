@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { RevisionUpdateBanner } from '@/components/ui/RevisionUpdateBanner';
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Receipt, SlidersHorizontal,
   BarChart3, FileText, Settings, LogOut, Coffee, Calendar, User, Menu as MenuIcon, X, Sparkles, Package, Truck, ShoppingCart, History,
@@ -24,6 +25,40 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
   const { showToast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showRevisionConflict, setShowRevisionConflict] = useState(false);
+  const [isRefreshingConflict, setIsRefreshingConflict] = useState(false);
+
+  useEffect(() => {
+    const handleConflict = () => {
+      setShowRevisionConflict(true);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('koyal-revision-conflict', handleConflict);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('koyal-revision-conflict', handleConflict);
+      }
+    };
+  }, []);
+
+  // Dismiss revision conflict banner when navigating routes
+  useEffect(() => {
+    setShowRevisionConflict(false);
+  }, [pathname]);
+
+  const handleConflictRefresh = () => {
+    setIsRefreshingConflict(true);
+    try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('koyal-refresh-data'));
+      }
+      router.refresh();
+      setShowRevisionConflict(false);
+    } finally {
+      setIsRefreshingConflict(false);
+    }
+  };
 
   const today = getTodayIsoDate();
 
@@ -191,7 +226,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children, admin }) => {
       )}
 
       {/* Main Screen Content */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full mb-16 md:mb-0">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full mb-16 md:mb-0 space-y-4">
+        <RevisionUpdateBanner
+          show={showRevisionConflict}
+          onRefresh={handleConflictRefresh}
+          isRefreshing={isRefreshingConflict}
+        />
         {children}
       </main>
 

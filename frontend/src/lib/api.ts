@@ -24,7 +24,8 @@ import {
   BillConsumptionDTO, BillCostCoverageDTO,
   PnlResult, AnalyticsOverviewResult, MenuPerformanceResult,
   SalesRegisterResult, PurchaseRegisterResult, ExpenseRegisterResult,
-  MonthlyPnlResult, InventoryValuationResult, ReconciliationRangeResult
+  MonthlyPnlResult, InventoryValuationResult, ReconciliationRangeResult,
+  SafeDeviceSessionDTO, RevokeSessionResultDTO, RevokeOthersResultDTO, SafeBackupStatusDTO
 } from './types';
 
 /** Base URL for all API requests. Dynamically resolves from NEXT_PUBLIC_API_URL or environment host. */
@@ -83,7 +84,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     VALIDATION_ERROR: 'Please review the highlighted fields.',
     DAY_ALREADY_CLOSED: 'This day is already closed. Reopen it before changing these details.',
     BILL_ALREADY_VOIDED: 'This bill has already been voided.',
-    CONFLICT: 'This record changed elsewhere. Refresh and try again.',
+    CONFLICT: 'This record changed on another device. Refresh to see the latest version.',
+    STALE_REVISION: 'This record changed on another device. Refresh to see the latest version.',
     RATE_LIMITED: 'Too many attempts. Please wait a moment and try again.',
     INTERNAL_ERROR: 'Something went wrong. Please try again.',
     UNAUTHORIZED: 'Sign-in details are incorrect. Please try again.',
@@ -107,11 +109,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
     IDEMPOTENCY_KEY_REUSED: 'This request was already submitted. Please refresh and check current state.',
     STAFF_ARCHIVED: 'Cannot record attendance for a staff member who was archived before this date.',
     ATTENDANCE_TIME_INVALID: 'Check-in and check-out times must be valid and check-out must be after check-in.',
-    ATTENDANCE_CONFLICT: 'Attendance record was updated on another device. Please refresh.',
+    ATTENDANCE_CONFLICT: 'This record changed on another device. Refresh to see the latest version.',
     INVALID_ATTENDANCE_STATUS: 'Please provide a valid attendance status.',
     REPORT_TOO_LARGE: 'Attendance report date range cannot exceed 366 days.',
     INGREDIENT_ARCHIVED: 'This ingredient is no longer active.',
-    RECIPE_CONFLICT: 'This recipe changed elsewhere. Refresh before continuing.',
+    RECIPE_CONFLICT: 'This record changed on another device. Refresh to see the latest version.',
     RECIPE_VERSION_NOT_DRAFT: 'Only draft recipe versions can be edited or activated.',
     DUPLICATE_RECIPE_INGREDIENT: 'Duplicate inventory item specified in recipe ingredients.',
     MENU_ITEM_ARCHIVED: 'Cannot create or modify recipe for an archived or inactive menu item.'
@@ -148,9 +150,32 @@ async function request<T>(endpoint: string, options: RequestInit = {}, idempoten
         code = 'UNKNOWN_ERROR';
       }
     }
-    const safeMessage = (code === 'VALIDATION_ERROR' && errorObj.message)
+    const isLoginEndpoint = endpoint === '/api/auth/login';
+    let safeMessage = (code === 'VALIDATION_ERROR' && errorObj.message)
       ? errorObj.message
       : (SAFE_ERROR_MAPPINGS[code] || errorObj.message || 'An unexpected error occurred. Please try again.');
+
+    if (response.status === 401 && !isLoginEndpoint) {
+      safeMessage = 'Your session has ended. Please sign in again.';
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('koyal-session-expired'));
+      }
+    }
+
+    const isConflict =
+      response.status === 409 ||
+      code === 'CONFLICT' ||
+      code === 'STALE_REVISION' ||
+      code === 'ATTENDANCE_CONFLICT' ||
+      code === 'RECIPE_CONFLICT';
+
+    if (isConflict && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('koyal-revision-conflict', {
+          detail: { code, message: safeMessage }
+        })
+      );
+    }
     throw new ApiError(safeMessage, code, response.status, data.requestId);
   }
 
@@ -283,6 +308,16 @@ export const api = {
     request<{ targets: TargetSettingsDTO }>('/api/settings/targets', { method: 'PUT', body: JSON.stringify(payload) }),
   updateTaxSettings: (payload: { enabled: boolean; label: string; rate: number | string; isInclusive: boolean }) =>
     request<{ tax: TaxSettingsDTO }>('/api/settings/tax', { method: 'PUT', body: JSON.stringify(payload) }),
+
+  // Module 5 — Device Sessions & Backup Health
+  getDeviceSessions: () =>
+    request<{ sessions: SafeDeviceSessionDTO[] }>('/api/settings/sessions'),
+  revokeSession: (id: string, idempotencyKey?: string) =>
+    request<RevokeSessionResultDTO>(`/api/settings/sessions/${encodeURIComponent(id)}/revoke`, { method: 'POST' }, idempotencyKey),
+  revokeOtherSessions: (idempotencyKey?: string) =>
+    request<RevokeOthersResultDTO>('/api/settings/sessions/revoke-others', { method: 'POST' }, idempotencyKey),
+  getBackupStatus: () =>
+    request<{ backupStatus: SafeBackupStatusDTO }>('/api/settings/backup-status'),
 
   // Menu & Tables
   listCategories: (includeArchived = false) =>

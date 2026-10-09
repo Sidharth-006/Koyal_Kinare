@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Building2, Target, Percent, Grid, LogOut, Save } from 'lucide-react';
+import { SettingsNav } from '@/components/settings/SettingsNav';
 
 export default function SettingsPage() {
   const { showToast } = useToast();
@@ -172,6 +173,8 @@ export default function SettingsPage() {
           Sign Out
         </Button>
       </div>
+
+      <SettingsNav />
 
       {/* Tabs */}
       <Card className="flex flex-wrap gap-2 bg-cream-50 p-1.5 border-border">

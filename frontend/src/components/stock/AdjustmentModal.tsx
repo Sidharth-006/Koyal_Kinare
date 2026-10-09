@@ -37,6 +37,7 @@ export const AdjustmentModal: React.FC<AdjustmentModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [operationKey, setOperationKey] = useState<string | null>(null);
 
   const generateFreshIdempotencyKey = () => {
     if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
@@ -98,7 +99,8 @@ export const AdjustmentModal: React.FC<AdjustmentModalProps> = ({
     if (isSubmitting || isArchived) return;
 
     setIsSubmitting(true);
-    const idempotencyKey = generateFreshIdempotencyKey();
+    const keyToUse = operationKey || generateFreshIdempotencyKey();
+    if (!operationKey) setOperationKey(keyToUse);
 
     try {
       const res = await api.recordStockAdjustment(
@@ -109,16 +111,19 @@ export const AdjustmentModal: React.FC<AdjustmentModalProps> = ({
           businessDate,
           reason: reason.trim() || undefined
         },
-        idempotencyKey
+        keyToUse
       );
 
       setIsSubmitting(false);
+      setOperationKey(null);
       onSuccess(res.resultingBalance);
       onClose();
     } catch (err: unknown) {
       setIsSubmitting(false);
       if (err instanceof ApiError) {
-        if (err.statusCode === 409 || err.code === 'INSUFFICIENT_STOCK' || err.message.toLowerCase().includes('negative') || err.message.toLowerCase().includes('insufficient')) {
+        if (err.statusCode === 0 || err.code === 'NETWORK_ERROR' || err.code === 'TIMEOUT_ERROR') {
+          setGeneralError('Network connection interrupted. The operation key is preserved — retry safely.');
+        } else if (err.statusCode === 409 || err.code === 'INSUFFICIENT_STOCK' || err.message.toLowerCase().includes('negative') || err.message.toLowerCase().includes('insufficient')) {
           setGeneralError('This change would make stock negative. Review the current quantity.');
         } else {
           setGeneralError(err.message || 'Failed to record adjustment.');
@@ -129,10 +134,18 @@ export const AdjustmentModal: React.FC<AdjustmentModalProps> = ({
     }
   };
 
+  const handleCancel = () => {
+    if (isSubmitting) return;
+    setOperationKey(null);
+    setGeneralError(null);
+    setFieldErrors({});
+    onClose();
+  };
+
   return (
     <Modal
       isOpen={isOpen}
-      onClose={isSubmitting ? () => {} : onClose}
+      onClose={handleCancel}
       title="Adjust Inventory Stock"
       size="md"
     >
@@ -330,7 +343,7 @@ export const AdjustmentModal: React.FC<AdjustmentModalProps> = ({
           <Button
             type="button"
             variant="secondary"
-            onClick={onClose}
+            onClick={handleCancel}
             disabled={isSubmitting}
           >
             Cancel

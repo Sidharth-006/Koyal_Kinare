@@ -26,9 +26,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (isMounted) setLoading(false);
       }
     }
+    const handleExpired = () => {
+      if (isMounted) {
+        setAdmin(null);
+        router.push('/login');
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('koyal-session-expired', handleExpired);
+    }
     checkAuth();
     return () => {
       isMounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('koyal-session-expired', handleExpired);
+      }
     };
   }, [router]);
 

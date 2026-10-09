@@ -27,6 +27,7 @@ export default function BillDetailPage() {
   const [showVoidModal, setShowVoidModal] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [submittingVoid, setSubmittingVoid] = useState(false);
+  const [voidOperationKey, setVoidOperationKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (billId) {
@@ -52,19 +53,40 @@ export default function BillDetailPage() {
       showToast('Mandatory void reason is required', 'warning');
       return;
     }
+    if (submittingVoid) return;
+
+    let keyToUse = voidOperationKey;
+    if (!keyToUse) {
+      keyToUse = typeof window !== 'undefined' && window.crypto?.randomUUID
+        ? window.crypto.randomUUID()
+        : `void_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      setVoidOperationKey(keyToUse);
+    }
 
     setSubmittingVoid(true);
     try {
-      const res = await api.voidBill(billId, voidReason.trim());
+      const res = await api.voidBill(billId, voidReason.trim(), keyToUse);
       setBill(res.bill);
       showToast(`Bill #${res.bill.bill_number || res.bill.billNumber} voided successfully!`, 'success');
       setShowVoidModal(false);
       setVoidReason('');
+      setVoidOperationKey(null);
     } catch (err: any) {
-      showToast(err.message || 'Failed to void bill', 'error');
+      if (err?.statusCode === 0 || err?.code === 'NETWORK_ERROR' || err?.code === 'TIMEOUT_ERROR') {
+        showToast('Network connection interrupted. The operation key is preserved — retry safely.', 'warning');
+      } else {
+        showToast(err.message || 'Failed to void bill', 'error');
+      }
     } finally {
       setSubmittingVoid(false);
     }
+  };
+
+  const handleCloseVoidModal = () => {
+    if (submittingVoid) return;
+    setShowVoidModal(false);
+    setVoidReason('');
+    setVoidOperationKey(null);
   };
 
   if (loading) {
@@ -257,7 +279,7 @@ export default function BillDetailPage() {
       {/* MANDATORY VOID BILL MODAL */}
       <Modal
         isOpen={showVoidModal}
-        onClose={() => setShowVoidModal(false)}
+        onClose={handleCloseVoidModal}
         title="Void Bill Confirmation"
       >
         <form onSubmit={handleVoidBill} className="space-y-4">
@@ -281,7 +303,7 @@ export default function BillDetailPage() {
           />
 
           <div className="flex justify-end gap-3 pt-3">
-            <Button variant="ghost" onClick={() => setShowVoidModal(false)} type="button">
+            <Button variant="ghost" onClick={handleCloseVoidModal} type="button">
               Cancel
             </Button>
             <Button variant="danger" type="submit" isLoading={submittingVoid}>

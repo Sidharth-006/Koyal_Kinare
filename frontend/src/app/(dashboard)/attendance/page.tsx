@@ -148,25 +148,32 @@ function AttendanceRosterContent() {
     return map;
   }, [roster]);
 
-  // Load roster data from backend
-  const loadRoster = useCallback(async (date: string) => {
+  // Load roster data from backend, preserving unsaved local drafts if requested
+  const loadRoster = useCallback(async (date: string, preserveDrafts = false) => {
     setLoading(true);
     setError(null);
     try {
       const res = await api.getDailyAttendance(date);
       setRoster(res.roster || []);
 
-      // Initialize local row states
-      const initial: Record<string, RowState> = {};
-      (res.roster || []).forEach((item) => {
-        initial[item.staffId] = {
-          status: item.status,
-          checkInTime: isoToTimeInput(item.checkInAt),
-          checkOutTime: isoToTimeInput(item.checkOutAt),
-          note: item.note || ''
-        };
+      // Initialize or preserve local row states
+      setRowStates((prev) => {
+        const next: Record<string, RowState> = {};
+        (res.roster || []).forEach((item) => {
+          const current = prev[item.staffId];
+          if (preserveDrafts && current) {
+            next[item.staffId] = current;
+          } else {
+            next[item.staffId] = {
+              status: item.status,
+              checkInTime: isoToTimeInput(item.checkInAt),
+              checkOutTime: isoToTimeInput(item.checkOutAt),
+              note: item.note || ''
+            };
+          }
+        });
+        return next;
       });
-      setRowStates(initial);
     } catch (err: any) {
       if (err instanceof ApiError) {
         setError(err.message || 'Failed to load attendance roster.');
@@ -180,6 +187,21 @@ function AttendanceRosterContent() {
 
   useEffect(() => {
     loadRoster(selectedDate);
+  }, [selectedDate, loadRoster]);
+
+  // Listen for revision update refresh while preserving drafts
+  useEffect(() => {
+    const handleDataRefresh = () => {
+      loadRoster(selectedDate, true);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('koyal-refresh-data', handleDataRefresh);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('koyal-refresh-data', handleDataRefresh);
+      }
+    };
   }, [selectedDate, loadRoster]);
 
   // Sync date changes with URL query parameter

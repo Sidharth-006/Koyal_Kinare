@@ -44,6 +44,41 @@ export interface TaxSettingsDTO {
   updated_by?: string | null;
 }
 
+export interface SafeDeviceSessionDTO {
+  id: string;
+  deviceLabel: string;
+  lastSeenAt: string;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
+export interface DeviceSessionsResponseDTO {
+  sessions: SafeDeviceSessionDTO[];
+}
+
+export interface RevokeSessionResultDTO {
+  message: string;
+  isCurrentSession: boolean;
+  loggedOut: boolean;
+}
+
+export interface RevokeOthersResultDTO {
+  message: string;
+  revokedCount: number;
+}
+
+export interface SafeBackupStatusDTO {
+  lastSuccessfulBackupAt: string | null;
+  nextScheduledRun: string;
+  status: 'SUCCEEDED' | 'FAILED' | 'RUNNING' | 'SCHEDULED' | 'NO_RUNS';
+  safeFailureCode: string | null;
+  instruction: string;
+}
+
+export interface BackupStatusResponseDTO {
+  backupStatus: SafeBackupStatusDTO;
+}
+
 export interface CategoryDTO {
   id: string;
   name: string;
