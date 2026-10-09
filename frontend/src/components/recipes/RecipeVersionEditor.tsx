@@ -9,7 +9,7 @@ import {
 } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastContext';
-import { Plus, Trash2, AlertCircle, Save, Info } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Save, Info, CheckCircle2 } from 'lucide-react';
 
 interface IngredientRowState {
   id?: string;
@@ -25,13 +25,15 @@ interface RecipeVersionEditorProps {
   existingDraft?: RecipeVersionDetailDTO | null;
   onSuccess: () => void;
   onCancel?: () => void;
+  onActivateRequest?: () => void;
 }
 
 export const RecipeVersionEditor: React.FC<RecipeVersionEditorProps> = ({
   menuItemId,
   existingDraft,
   onSuccess,
-  onCancel
+  onCancel,
+  onActivateRequest
 }) => {
   const { showToast } = useToast();
   const isEditing = Boolean(existingDraft);
@@ -237,8 +239,46 @@ export const RecipeVersionEditor: React.FC<RecipeVersionEditorProps> = ({
     }
   };
 
+  const handleSaveAndActivate = async () => {
+    if (!validateForm()) {
+      showToast('Please fix the validation errors before activating.', 'warning');
+      return;
+    }
+
+    setSubmitting(true);
+    setClientErrors([]);
+
+    const payloadIngredients: CreateDraftIngredientInput[] = ingredients.map((ing) => ({
+      inventoryItemId: ing.inventoryItemId,
+      quantity: parseFloat(ing.quantity),
+      wastageAllowancePct: ing.wastageAllowancePct ? parseFloat(ing.wastageAllowancePct) : 0,
+      note: ing.note?.trim() || undefined
+    }));
+
+    const cleanPayload: CreateDraftPayload | UpdateDraftPayload = {
+      ingredients: payloadIngredients,
+      note: note.trim() || undefined
+    };
+
+    try {
+      if (isEditing && existingDraft) {
+        await api.updateRecipeDraft(existingDraft.id, cleanPayload);
+      } else {
+        await api.createRecipeDraft(menuItemId, cleanPayload);
+      }
+      onSuccess();
+      if (onActivateRequest) {
+        onActivateRequest();
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save recipe draft.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" data-testid="recipe-version-editor">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4" data-testid="recipe-version-editor">
       {/* Informational banner: stock deduction notice */}
       <div className="flex items-center gap-2 p-3 bg-cream-100/70 border border-border rounded-xl text-slate-700 text-xs">
         <Info className="w-4 h-4 text-forest-700 shrink-0" />
@@ -338,11 +378,11 @@ export const RecipeVersionEditor: React.FC<RecipeVersionEditorProps> = ({
                     </label>
                     <input
                       type="number"
-                      step="0.001"
+                      step="any"
                       min="0.0001"
                       value={row.quantity}
                       onChange={(e) => handleRowChange(index, 'quantity', e.target.value)}
-                      placeholder="0.00"
+                      placeholder="e.g. 1"
                       disabled={submitting}
                       className="w-full text-xs p-2.5 rounded-lg border border-border bg-white text-slate-800 font-bold min-h-[44px] focus:outline-none focus:ring-2 focus:ring-forest-800/20"
                       data-testid={`quantity-input-${index}`}
@@ -354,7 +394,7 @@ export const RecipeVersionEditor: React.FC<RecipeVersionEditorProps> = ({
                     <label className="block text-[11px] font-bold text-slate-600">Wastage %</label>
                     <input
                       type="number"
-                      step="0.1"
+                      step="any"
                       min="0"
                       max="100"
                       value={row.wastageAllowancePct}
@@ -432,7 +472,7 @@ export const RecipeVersionEditor: React.FC<RecipeVersionEditorProps> = ({
       </div>
 
       {/* Submit / Cancel Actions */}
-      <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-border">
         {onCancel && (
           <Button
             type="button"
@@ -446,7 +486,7 @@ export const RecipeVersionEditor: React.FC<RecipeVersionEditorProps> = ({
         )}
         <Button
           type="submit"
-          variant="primary"
+          variant={onActivateRequest ? 'secondary' : 'primary'}
           icon={<Save className="w-4 h-4" />}
           isLoading={submitting}
           disabled={submitting || hasDuplicates}
@@ -455,6 +495,20 @@ export const RecipeVersionEditor: React.FC<RecipeVersionEditorProps> = ({
         >
           {isEditing ? 'Save Draft Changes' : 'Create Draft Recipe'}
         </Button>
+        {onActivateRequest && (
+          <Button
+            type="button"
+            variant="primary"
+            icon={<CheckCircle2 className="w-4 h-4" />}
+            onClick={handleSaveAndActivate}
+            isLoading={submitting}
+            disabled={submitting || hasDuplicates}
+            className="min-h-[44px] bg-emerald-700 hover:bg-emerald-800 text-white"
+            data-testid="save-and-activate-btn"
+          >
+            {isEditing ? `Save & Activate Draft (v${existingDraft?.versionNumber})` : 'Save & Activate Draft'}
+          </Button>
+        )}
       </div>
     </form>
   );

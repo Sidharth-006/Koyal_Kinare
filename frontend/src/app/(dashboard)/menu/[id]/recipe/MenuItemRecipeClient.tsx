@@ -231,6 +231,11 @@ function MenuItemRecipeClientInner({ menuItemIdProp }: { menuItemIdProp?: string
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 Active Version: <strong>Version {activeVersion?.versionNumber}</strong> ({activeVersion?.ingredients.length} ingredients)
               </span>
+            ) : draftVersion ? (
+              <span className="flex items-center gap-1.5 text-amber-800 font-semibold" data-testid="missing-active-version-notice">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                No active recipe is currently linked. Draft Version {draftVersion.versionNumber} is ready below — click &quot;Activate Draft&quot; to make it active.
+              </span>
             ) : (
               <span className="flex items-center gap-1.5 text-amber-800 font-semibold" data-testid="missing-active-version-notice">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
@@ -367,6 +372,21 @@ function MenuItemRecipeClientInner({ menuItemIdProp }: { menuItemIdProp?: string
           ) : null}
         </div>
 
+        {/* Clear Step-by-Step Guide for Drafts */}
+        {draftVersion && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-950 font-medium">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-800 text-[10px] font-bold text-white">1</span>
+              <span>Edit ingredient quantities below and click <strong>&quot;Save Draft Changes&quot;</strong></span>
+            </div>
+            <div className="hidden sm:block text-amber-400 font-bold">→</div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white">2</span>
+              <span>Click <strong>&quot;Activate Draft (v{draftVersion.versionNumber})&quot;</strong> to link this recipe for billing</span>
+            </div>
+          </div>
+        )}
+
         {/* Editor Form */}
         {showEditor ? (
           <RecipeVersionEditor
@@ -374,6 +394,9 @@ function MenuItemRecipeClientInner({ menuItemIdProp }: { menuItemIdProp?: string
             existingDraft={draftVersion}
             onSuccess={() => {
               loadRecipeData();
+            }}
+            onActivateRequest={() => {
+              setShowActivateModal(true);
             }}
             onCancel={draftVersion ? undefined : () => setShowEditor(false)}
           />
